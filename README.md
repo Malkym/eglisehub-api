@@ -1,59 +1,467 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# EgliseHub Platform
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+EgliseHub est une plateforme **SaaS (Software as a Service)** permettant aux ministères et églises de créer et gérer facilement leur site web.
 
-## About Laravel
+La plateforme fonctionne avec une architecture **multi-tenant basée sur les sous-domaines**, ce qui permet à plusieurs ministères d'utiliser la même application tout en gardant leurs données séparées.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Exemples :
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+crc.eglisehub.com  
+eglisevie.eglisehub.com  
+royaumeeglise.eglisehub.com  
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Chaque ministère possède :
 
-## Learning Laravel
+- son site public
+- son tableau de bord d'administration
+- ses pages personnalisées
+- ses articles et événements
+- ses paramètres de personnalisation
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Sommaire
 
-## Laravel Sponsors
+- Présentation
+- Architecture
+- Technologies utilisées
+- Architecture multi-tenant
+- Gestion des rôles
+- Installation Backend
+- Installation Frontend
+- Structure du projet
+- Authentification
+- API Endpoints
+- Déploiement
+- CI/CD
+- Tests
+- Roadmap
+- Licence
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+# Présentation
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+EgliseHub est une plateforme permettant de résoudre un problème fréquent :  
+beaucoup d'églises et ministères ne possèdent pas de site web ou n'ont pas les compétences techniques pour en créer un.
 
-## Contributing
+EgliseHub permet donc de :
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- créer un site pour un ministère en quelques minutes
+- gérer le contenu via une interface simple
+- publier des articles et enseignements
+- gérer les événements
+- personnaliser l'apparence du site
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+# Architecture
 
-## Security Vulnerabilities
+La plateforme est composée de deux parties principales :
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Backend API  
+Frontend Application
 
-## License
+Le backend fournit les services suivants :
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- authentification
+- gestion des ministères
+- gestion des utilisateurs
+- gestion du contenu
+- gestion des médias
+
+Le frontend consomme ces API pour afficher :
+
+- les sites publics
+- les dashboards d'administration
+
+---
+
+# Architecture Multi-Tenant
+
+EgliseHub utilise une architecture **multi-tenant par sous-domaine**.
+
+Chaque ministère est identifié par son **slug**.
+
+Exemple :
+
+crc.eglisehub.com
+
+Le backend lit le host de la requête HTTP :
+
+Host: crc.eglisehub.com
+
+Puis extrait :
+
+slug = crc
+
+Le système charge ensuite les données associées à ce ministère.
+
+---
+
+# Diagramme d'architecture
+
+                           ┌─────────────────────────────────────────────────┐
+                                          │ INTERNET │
+                           └────────────────────┬────────────────────────────┘
+                                                │
+                                                ▼
+                                        ┌─────────────────┐
+                                         │ eglisehub.com │
+                                        └────────┬─────────┘
+                                                 │
+                                 ┌───────────────┼───────────────┐
+                                 │               │               │
+                                 ▼               ▼               ▼
+                        ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+                         │ Super Admin │   │ Ministries │     │ Ministries │
+                        └───────┬───────┘ └───────┬───────┘ └───────┬───────┘
+                                                │ │ │
+                                  │ ┌─────────────┼─────────────┐ │
+                                              │ │ │ │ │
+                                              │ ▼ ▼ ▼ │
+                               │ ┌─────────┐ ┌─────────┐ ┌─────────┐
+                               │ │crc.eglise│ │vieeglise│ │royaume │
+                               │ │hub.com │ │.eglise │ │.eglise │
+                                 │ │ │ │hub.com │ │hub.com │
+                               │ └─────────┘ └─────────┘ └─────────┘
+                                                │ │ │
+                                   └──────────────┼─────────────┘
+                                                  │
+                                                  ▼
+                                        ┌─────────────────────┐
+                                        │Frontend Application │
+                                        └──────────┬───────────┘
+                                                   │
+                                                   ▼
+                                        ┌─────────────────────┐
+                                        │Backend API (Node.js)│
+                                        └──────────┬───────────┘
+                                                   │
+                                                   ▼
+                                       ┌─────────────────────┐
+                                         │ Base de données │
+                                       └─────────────────────┘
+
+                                                text
+
+
+
+---
+
+## Technologies utilisées
+
+### Backend
+- Node.js
+- Express.js
+- MySQL ou PostgreSQL
+- JWT Authentication
+- bcrypt
+- Swagger
+
+### Frontend
+- Vue.js
+- Vue Router
+- Pinia
+- Axios
+- TailwindCSS
+
+### DevOps
+- Docker
+- GitHub Actions
+- Nginx
+
+---
+
+## Gestion des rôles
+
+Le système possède trois rôles principaux.
+
+### Super Admin
+- gère toute la plateforme
+- crée les ministères
+- crée les administrateurs
+- accède à tous les dashboards
+
+### Admin Ministère
+- gère le site de son ministère
+- modifie les pages
+- publie des articles
+- gère les événements
+
+### Visitor
+- consulte le site public
+- lit les articles
+- consulte les événements
+
+---
+
+## Base de données
+
+Principales tables :
+- users
+- ministries
+- pages
+- page_sections
+- page_contents
+- articles
+- events
+- media
+- settings
+
+---
+
+## Authentification
+
+Le système utilise **JWT (JSON Web Token)**.
+
+Processus :
+1. utilisateur envoie email et password
+2. backend vérifie les informations
+3. backend génère un token JWT
+4. frontend utilise ce token pour accéder aux routes protégées
+
+---
+
+## Installation Backend
+
+### Requirements
+- Node.js >= 18
+- MySQL >= 8
+- NPM >= 9
+
+### Cloner le projet
+```bash
+git clone https://github.com/yourusername/eglisehub-api.git
+cd eglisehub-api
+```
+
+### Installer les dépendances
+```bash
+npm install
+```
+
+### Configuration
+Créer le fichier .env
+
+#### Linux / Mac
+
+```bash
+cp .env.example .env
+```
+
+#### Windows
+
+```bash
+copy .env.example .env
+```
+### Exemple de configuration
+
+```env
+APP_NAME=EgliseHub
+APP_PORT=5000
+NODE_ENV=development
+
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=eglisehub
+DB_USER=root
+DB_PASSWORD=
+
+JWT_SECRET=supersecretkey
+```
+
+### Lancer le serveur
+```bash
+npm run dev
+```
+
+## Installation Frontend
+Requirements
+- [Node.js >= 18](https://nodejs.org/en/download)
+
+- [Yarn >= 1.22](https://classic.yarnpkg.com/lang/en/docs/install)
+
+- [Vue CLI](https://cli.vuejs.org/guide/installation.html) ou [Vite](https://vite.dev/)
+
+### Installer les dépendances
+```bash
+yarn install
+```
+
+### Lancer le serveur
+```bash
+yarn dev
+```
+
+#### Build production
+```bash
+yarn build
+```
+
+### Structure du projet
+```text
+eglisehub
+│
+├── backend
+│   ├── controllers
+│   ├── routes
+│   ├── middlewares
+│   ├── models
+│   ├── services
+│   ├── config
+│   └── server.js
+│
+├── frontend
+│   ├── src
+│   ├── components
+│   ├── layouts
+│   ├── router
+│   ├── store
+│   └── views
+│
+└── docs
+```
+
+## API Endpoints
+```bash
+Auth
+POST /api/auth/login
+
+POST /api/auth/register
+```
+
+```bash
+Ministries
+GET /api/ministries
+
+POST /api/ministries
+
+PUT /api/ministries/:id
+```
+
+```bash
+Pages
+GET /api/pages
+
+POST /api/pages
+
+PUT /api/pages/:id
+```
+
+```bash
+Articles
+GET /api/articles
+
+POST /api/articles
+
+DELETE /api/articles/:id
+```
+
+## Swagger Documentation
+Swagger permet de tester toutes les routes API.
+
+### Local :
+
+```text
+http://localhost:5000/api/docs
+```
+
+### Production :
+
+```text
+https://api.eglisehub.com/docs
+```
+
+## Déploiement
+La plateforme peut être déployée avec :
+
+- Docker
+
+- Nginx
+
+- GitHub Actions
+
+- Netlify (frontend)
+
+### CI/CD
+Le pipeline CI/CD peut :
+
+- build le backend
+
+- lancer les tests
+
+- build le frontend
+
+- déployer automatiquement
+
+
+### Exemple pipeline GitHub Actions :
+
+```yaml
+on:
+  push:
+    branches:
+      - main
+```
+
+## Tests
+### Pour lancer les tests :
+
+```bash
+npm run test
+```
+
+### Pour la couverture de tests :
+
+```bash
+npm run test:coverage
+```
+
+## Roadmap
+### Version MVP
+- gestion ministères
+
+- gestion pages
+
+- gestion articles
+  
+- gestion des events
+
+- dashboard admin
+
+### Version 2
+- dons en ligne
+
+- live streaming
+
+- gestion membres
+
+### Version 3
+- application mobile
+
+- notifications
+
+- analytics
+
+## Licence
+### MIT License
+
+Voir LICENSE.md
+
+
+## Structure idéale :
+
+```text
+eglisehub
+│
+├── backend
+│   └── README.md
+│
+├── frontend
+│   └── README.md
+│
+├── docs
+│
+└── README.md
+```
