@@ -4,29 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Media extends Model
 {
-    protected $table = 'medias';
-
     use HasFactory;
 
+    protected $table = 'medias';
+
     protected $fillable = [
-        'ministere_id',
-        'nom_original',
-        'nom_fichier',
-        'chemin',
-        'url',
-        'type',
-        'mime_type',
-        'taille',
-        'categorie',
-        'alt_text',
+        'ministere_id', 'nom_original', 'nom_fichier', 'type',
+        'chemin', 'url', 'taille', 'mime_type', 'categorie', 'statut',
     ];
 
-    public function categories()
+    protected $casts = [
+        'taille' => 'integer',
+    ];
+
+    protected function url(): Attribute
     {
-        return $this->belongsToMany(Categorie::class, 'media_categories', 'media_id', 'categorie_id');
+        return Attribute::make(
+            get: fn ($value) => Article::buildStorageUrl($value),
+        );
     }
 
     public function ministere()

@@ -39,9 +39,11 @@ class MessageContactController extends Controller
     // GET /api/ministry/contact-messages/{id}
     public function show(Request $request, string $id)
     {
-        $message = $this->findForUser($request, $id);
+        $message = MessageContact::with([
+            'reponses.user:id,name,prenom'
+        ])->findOrFail($id);
 
-        // Marquer automatiquement comme lu à l'ouverture
+        // Auto-marquer comme lu
         if ($message->statut === 'non_lu') {
             $message->update([
                 'statut' => 'lu',
@@ -71,23 +73,48 @@ class MessageContactController extends Controller
     }
 
     // PATCH /api/ministry/contact-messages/{id}/reply
+    // Correction complète de la méthode reply
     public function reply(Request $request, string $id)
     {
-        $message = $this->findForUser($request, $id);
-
         $request->validate([
-            'reponse' => 'required|string',
+            'reponse' => 'required|string|min:1',
         ]);
 
+        $message = MessageContact::findOrFail($id);
+
+        // Vérifier ownership
+        if (! $request->user()->isSuperAdmin()) {
+            if ($message->ministere_id !== $request->user()->ministere_id) {
+                return response()->json(['success' => false, 'message' => 'Accès refusé.'], 403);
+            }
+        }
+
+        // Sauvegarder la réponse dans messages_reponses
+        $reponse = \App\Models\MessageReponse::create([
+            'message_id'  => $message->id,
+            'user_id'     => $request->user()->id,
+            'contenu'     => $request->reponse,
+        ]);
+
+        // Mettre à jour le statut du message
         $message->update(['statut' => 'repondu']);
 
-        // (En production : envoyer un email ici avec Mail::to())
+        // Marquer comme lu aussi
+        if (! $message->lu_le) {
+            $message->update(['lu_le' => now()]);
+        }
 
-        $this->log($request, 'reply_message', 'messages', "Réponse à: {$message->nom_expediteur}");
+        $this->log(
+            $request,
+            'reply_message',
+            'messages',
+            "Réponse au message #{$message->id} de {$message->nom_expediteur}"
+        );
 
         return response()->json([
             'success' => true,
             'message' => 'Réponse enregistrée.',
+            'data'    => $reponse,
         ]);
     }
 

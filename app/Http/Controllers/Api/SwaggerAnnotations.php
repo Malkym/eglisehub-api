@@ -136,11 +136,6 @@ namespace App\Http\Controllers\Api;
  *     @OA\Response(response=200, description="Article supprimé")
  * )
  *
- * @OA\Patch(path="/ministry/articles/{id}/publish", tags={"Articles"}, summary="Publier un article",
- *     security={{"bearerAuth":{}}},
- *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *     @OA\Response(response=200, description="Article publié")
- * )
  *
  * @OA\Patch(path="/ministry/articles/{id}/feature", tags={"Articles"}, summary="Mettre en avant / retirer",
  *     security={{"bearerAuth":{}}},

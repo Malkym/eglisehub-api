@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Slider extends Model
 {
@@ -18,14 +18,18 @@ class Slider extends Model
 
     protected $casts = [
         'actif' => 'boolean',
+        'ordre' => 'integer',
     ];
 
-    // Ajouter l'URL complète de l'image
-    protected $appends = ['image_url'];
-
-    public function getImageUrlAttribute(): ?string
+    protected function urlImage(): Attribute
     {
-        return $this->image ? Storage::url($this->image) : null;
+        return Attribute::make(
+            get: function ($value) {
+                // Essaie url_image d'abord, sinon image
+                $path = $value ?: $this->getRawOriginal('image');
+                return Article::buildStorageUrl($path);
+            },
+        );
     }
 
     public function ministere()

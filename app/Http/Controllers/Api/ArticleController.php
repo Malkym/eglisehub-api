@@ -157,15 +157,60 @@ class ArticleController extends Controller
     }
 
     // PATCH /api/ministry/articles/{id}/publish
+// APRÈS — toggle publication/dépublication
+    /**
+     * @OA\Patch(
+     *     path="/ministry/articles/{id}/publish",
+     *     tags={"Articles"},
+     *     summary="Publier ou dépublier un article (toggle)",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Statut modifié",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success",  type="boolean", example=true),
+     *             @OA\Property(property="message",  type="string",  example="Article publié."),
+     *             @OA\Property(property="statut",   type="string",  enum={"publie","brouillon"}),
+     *             @OA\Property(property="data",     type="object")
+     *         )
+     *     )
+     * )
+     */
     public function publish(Request $request, string $id)
     {
-        $article = $this->findArticleForUser($request, $id);
-        $article->update([
-            'statut'           => 'publie',
-            'date_publication' => $article->date_publication ?? now(),
-        ]);
+        $article = Article::findOrFail($id);
 
-        return response()->json(['success' => true, 'message' => 'Article publié.', 'data' => $article->fresh()]);
+        // Vérifier ownership
+        if (! $request->user()->isSuperAdmin()) {
+            if ($article->ministere_id !== $request->user()->ministere_id) {
+                return response()->json(['success' => false, 'message' => 'Accès refusé.'], 403);
+            }
+        }
+
+        // Toggle
+        if ($article->statut === 'publie') {
+            $article->update(['statut' => 'brouillon']);
+            $message = 'Article dépublié.';
+        } else {
+            $article->update([
+                'statut'           => 'publie',
+                'date_publication' => $article->date_publication ?? now(),
+            ]);
+            $message = 'Article publié.';
+        }
+
+        $this->log(
+            $request,
+            'toggle_publish_article',
+            'articles',
+            "{$message} : {$article->titre}"
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'statut'  => $article->fresh()->statut,
+            'data'    => $article->fresh(),
+        ]);
     }
 
     // PATCH /api/ministry/articles/{id}/feature

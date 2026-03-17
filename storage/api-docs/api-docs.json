@@ -24,6 +24,62 @@
         }
     ],
     "paths": {
+        "/ministry/articles/{id}/publish": {
+            "patch": {
+                "tags": [
+                    "Articles"
+                ],
+                "summary": "Publier ou dépublier un article (toggle)",
+                "operationId": "186cc38733db9bad7285bb4f0d5ac2b4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut modifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Article publié."
+                                        },
+                                        "statut": {
+                                            "type": "string",
+                                            "enum": [
+                                                "publie",
+                                                "brouillon"
+                                            ]
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/login": {
             "post": {
                 "tags": [
@@ -1279,35 +1335,6 @@
                 "responses": {
                     "200": {
                         "description": "Article supprimé"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/articles/{id}/publish": {
-            "patch": {
-                "tags": [
-                    "Articles"
-                ],
-                "summary": "Publier un article",
-                "operationId": "9534efccd66555e0d1d006bdfe574d84",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Article publié"
                     }
                 },
                 "security": [
