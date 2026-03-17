@@ -10,6 +10,25 @@ use Illuminate\Support\Str;
 
 class MinistereController extends Controller
 {
+
+    /**
+     * @OA\Get(
+     *     path="/admin/ministeres",
+     *     tags={"Ministères"},
+     *     summary="Liste tous les ministères",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="statut", in="query", @OA\Schema(type="string", enum={"actif","inactif","suspendu"})),
+     *     @OA\Parameter(name="type",   in="query", @OA\Schema(type="string", enum={"eglise","ministere","organisation","para_ecclesial","mission"})),
+     *     @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="page",   in="query", @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Liste paginée",
+     *         @OA\JsonContent(ref="#/components/schemas/Paginated")
+
+     *     ),
+     *     @OA\Response(response=403, description="Accès refusé — Super Admin uniquement")
+     * )
+     */
+
     // GET /api/admin/ministeres
     public function index(Request $request)
     {
@@ -34,6 +53,38 @@ class MinistereController extends Controller
             'data'    => $ministeres,
         ]);
     }
+
+    /**
+     * @OA\Post(
+     *     path="/admin/ministeres",
+     *     tags={"Ministères"},
+     *     summary="Créer un ministère",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"nom","type","sous_domaine"},
+     *             @OA\Property(property="nom",                type="string",  example="Église Victoire"),
+     *             @OA\Property(property="type",               type="string",  enum={"eglise","ministere","organisation","para_ecclesial","mission"}),
+     *             @OA\Property(property="sous_domaine",       type="string",  example="eglise-victoire"),
+     *             @OA\Property(property="description",        type="string",  nullable=true),
+     *             @OA\Property(property="couleur_primaire",   type="string",  example="#1E3A8A"),
+     *             @OA\Property(property="couleur_secondaire", type="string",  example="#FFFFFF"),
+     *             @OA\Property(property="email_contact",      type="string",  format="email", nullable=true),
+     *             @OA\Property(property="telephone",          type="string",  nullable=true),
+     *             @OA\Property(property="pays",               type="string",  example="République centrafricaine")
+     *         )
+     *     ),
+     *     @OA\Response(response=201, description="Ministère créé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data",    ref="#/components/schemas/Ministere")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Validation échouée"),
+     *     @OA\Response(response=403, description="Accès refusé")
+     * )
+     */
 
     // POST /api/admin/ministeres
     public function store(Request $request)
@@ -62,7 +113,7 @@ class MinistereController extends Controller
             'sous_domaine'      => strtolower($request->sous_domaine),
             'description'       => $request->description,
             'couleur_primaire'  => $request->couleur_primaire ?? '#1E3A8A',
-            'couleur_secondaire'=> $request->couleur_secondaire ?? '#FFFFFF',
+            'couleur_secondaire' => $request->couleur_secondaire ?? '#FFFFFF',
             'email_contact'     => $request->email_contact,
             'telephone'         => $request->telephone,
             'adresse'           => $request->adresse,
@@ -83,17 +134,54 @@ class MinistereController extends Controller
         ], 201);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/admin/ministeres/{id}",
+     *     tags={"Ministères"},
+     *     summary="Détail d'un ministère",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Ministère trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data",    ref="#/components/schemas/Ministere")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Non trouvé")
+     * )
+     */
+
     // GET /api/admin/ministeres/{id}
     public function show(string $id)
     {
         $ministere = Ministere::withCount(['pages', 'articles', 'evenements', 'utilisateurs'])
-                              ->findOrFail($id);
+            ->findOrFail($id);
 
         return response()->json([
             'success' => true,
             'data'    => $ministere,
         ]);
     }
+
+    /**
+     * @OA\Put(
+     *     path="/admin/ministeres/{id}",
+     *     tags={"Ministères"},
+     *     summary="Modifier un ministère",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="nom",          type="string"),
+     *             @OA\Property(property="type",         type="string"),
+     *             @OA\Property(property="description",  type="string"),
+     *             @OA\Property(property="statut",       type="string", enum={"actif","inactif","suspendu"})
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Ministère modifié"),
+     *     @OA\Response(response=404, description="Non trouvé")
+     * )
+     */
 
     // PUT /api/admin/ministeres/{id}
     public function update(Request $request, string $id)
@@ -123,10 +211,22 @@ class MinistereController extends Controller
         }
 
         $ministere->update($request->only([
-            'nom', 'type', 'slug', 'sous_domaine', 'description',
-            'couleur_primaire', 'couleur_secondaire',
-            'email_contact', 'telephone', 'adresse', 'ville', 'pays',
-            'facebook_url', 'youtube_url', 'whatsapp', 'statut',
+            'nom',
+            'type',
+            'slug',
+            'sous_domaine',
+            'description',
+            'couleur_primaire',
+            'couleur_secondaire',
+            'email_contact',
+            'telephone',
+            'adresse',
+            'ville',
+            'pays',
+            'facebook_url',
+            'youtube_url',
+            'whatsapp',
+            'statut',
         ]));
 
         $this->log($request, 'update_ministere', 'ministeres', "Modification: {$ministere->nom}");
@@ -137,6 +237,18 @@ class MinistereController extends Controller
             'data'    => $ministere->fresh(),
         ]);
     }
+
+    /**
+     * @OA\Delete(
+     *     path="/admin/ministeres/{id}",
+     *     tags={"Ministères"},
+     *     summary="Désactiver un ministère",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Ministère désactivé"),
+     *     @OA\Response(response=404, description="Non trouvé")
+     * )
+     */
 
     // DELETE /api/admin/ministeres/{id}
     public function destroy(Request $request, string $id)
@@ -151,6 +263,23 @@ class MinistereController extends Controller
             'message' => 'Ministère désactivé.',
         ]);
     }
+
+    /**
+     * @OA\Patch(
+     *     path="/admin/ministeres/{id}/toggle",
+     *     tags={"Ministères"},
+     *     summary="Activer ou désactiver un ministère",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Statut modifié",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string",  example="Ministère actif."),
+     *             @OA\Property(property="data",    ref="#/components/schemas/Ministere")
+     *         )
+     *     )
+     * )
+     */
 
     // PATCH /api/admin/ministeres/{id}/toggle
     public function toggle(Request $request, string $id)
@@ -168,6 +297,22 @@ class MinistereController extends Controller
             'data'    => $ministere->fresh(),
         ]);
     }
+
+    /**
+     * @OA\Get(
+     *     path="/admin/ministeres/{id}/stats",
+     *     tags={"Ministères"},
+     *     summary="Statistiques d'un ministère",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(response=200, description="Stats retournées",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data",    type="object")
+     *         )
+     *     )
+     * )
+     */
 
     // GET /api/admin/ministeres/{id}/stats
     public function stats(string $id)
@@ -190,9 +335,9 @@ class MinistereController extends Controller
                 'vues_totales'   => $ministere->articles()->sum('vues'),
                 'en_avant'       => $ministere->articles()->where('en_avant', true)->count(),
                 'par_type'       => $ministere->articles()
-                                              ->selectRaw('type_contenu, count(*) as total')
-                                              ->groupBy('type_contenu')
-                                              ->pluck('total', 'type_contenu'),
+                    ->selectRaw('type_contenu, count(*) as total')
+                    ->groupBy('type_contenu')
+                    ->pluck('total', 'type_contenu'),
             ],
             'evenements'  => [
                 'total'      => $ministere->evenements()->count(),
@@ -214,16 +359,35 @@ class MinistereController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/public/ministere",
+     *     tags={"Public"},
+     *     summary="Récupérer un ministère par sous-domaine",
+     *     description="Route publique — aucune authentification requise",
+     *     @OA\Parameter(name="subdomain", in="query", required=false, @OA\Schema(type="string", example="crc"),
+     *         description="Sous-domaine du ministère"
+     *     ),
+     *     @OA\Response(response=200, description="Ministère trouvé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data",    ref="#/components/schemas/Ministere")
+     *         )
+     *     ),
+     *     @OA\Response(response=404, description="Ministère non trouvé ou inactif")
+     * )
+     */
+
     // GET /api/public/ministere
     public function getBySubdomain(Request $request)
     {
         $sousdomaine = $request->header('X-Subdomain')
-                    ?? $request->query('subdomain')
-                    ?? 'crc';
+            ?? $request->query('subdomain')
+            ?? 'crc';
 
         $ministere = Ministere::where('sous_domaine', $sousdomaine)
-                              ->where('statut', 'actif')
-                              ->first();
+            ->where('statut', 'actif')
+            ->first();
 
         if (! $ministere) {
             return response()->json([

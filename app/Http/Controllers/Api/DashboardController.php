@@ -12,7 +12,7 @@ use App\Models\Media;
 use App\Models\MessageContact;
 use App\Models\LogAction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+//use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {

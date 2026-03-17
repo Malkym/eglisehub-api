@@ -6,12 +6,65 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\LogAction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+//use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ *
+ * @OA\Server(
+ *     url="http://127.0.0.1:8000/api",
+ *     description="Serveur local de développement"
+ * )
+ *
+ *
+ * @OA\Tag(name="Auth", description="Authentification")
+ * @OA\Tag(name="Ministères", description="Gestion des ministères")
+ * @OA\Tag(name="Pages", description="Gestion des pages")
+ * @OA\Tag(name="Articles", description="Gestion des articles")
+ * @OA\Tag(name="Événements", description="Gestion des événements")
+ * @OA\Tag(name="Médias", description="Gestion des médias")
+ * @OA\Tag(name="Messages", description="Messages de contact")
+ * @OA\Tag(name="Utilisateurs", description="Gestion des utilisateurs")
+ * @OA\Tag(name="Paramètres", description="Paramètres du ministère")
+ * @OA\Tag(name="Dashboard", description="Statistiques et dashboard")
+ * @OA\Tag(name="FAQ", description="Gestion des FAQs")
+ * @OA\Tag(name="Sliders", description="Gestion des sliders")
+ * @OA\Tag(name="Tags", description="Gestion des tags")
+ * @OA\Tag(name="Logs", description="Logs et activité")
+ * @OA\Tag(name="Notifications", description="Notifications")
+ * @OA\Tag(name="Public", description="Routes publiques sans authentification")
+ */
+
 class AuthController extends Controller
 {
+
+    /**
+     * @OA\Post(
+     *     path="/login",
+     *     tags={"Auth"},
+     *     summary="Connexion utilisateur",
+     *     description="Retourne un token Sanctum valide",
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"email","password"},
+     *             @OA\Property(property="email",    type="string", format="email", example="admin@eglisehub.org"),
+     *             @OA\Property(property="password", type="string", example="password123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200, description="Succès",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="token",   type="string",  example="1|abc123"),
+     *             @OA\Property(property="user",    ref="#/components/schemas/User")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Identifiants incorrects")
+     * )
+     */
+
     // POST /api/login
     public function login(Request $request)
     {
@@ -21,8 +74,8 @@ class AuthController extends Controller
         ]);
 
         $user = User::where('email', $request->email)
-                    ->where('actif', true)
-                    ->first();
+            ->where('actif', true)
+            ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
@@ -39,7 +92,7 @@ class AuthController extends Controller
         // Logger l'action
         LogAction::create([
             'user_id'     => $user->id,
-            'ministere_id'=> $user->ministere_id,
+            'ministere_id' => $user->ministere_id,
             'action'      => 'login',
             'module'      => 'auth',
             'ip'          => $request->ip(),
@@ -61,6 +114,22 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/logout",
+     *     tags={"Auth"},
+     *     summary="Déconnexion",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Déconnecté",
+     *         @OA\JsonContent(ref="#/components/schemas/Success")
+     *     ),
+     *     @OA\Response(response=401, description="Non authentifié")
+     * )
+     */
+
+
     // POST /api/logout
     public function logout(Request $request)
     {
@@ -73,6 +142,22 @@ class AuthController extends Controller
         ]);
     }
 
+
+    /**
+     * @OA\Get(
+     *     path="/me",
+     *     tags={"Auth"},
+     *     summary="Profil de l'utilisateur connecté",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(response=200, description="Profil retourné",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="user",    ref="#/components/schemas/User")
+     *         )
+     *     )
+     * )
+     */
+
     // GET /api/me
     public function me(Request $request)
     {
@@ -84,12 +169,36 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/change-password",
+     *     tags={"Auth"},
+     *     summary="Changer le mot de passe",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"ancien_mot_de_passe","nouveau_mot_de_passe","nouveau_mot_de_passe_confirmation"},
+     *             @OA\Property(property="ancien_mot_de_passe",               type="string", example="password123"),
+     *             @OA\Property(property="nouveau_mot_de_passe",              type="string", example="newpassword456"),
+     *             @OA\Property(property="nouveau_mot_de_passe_confirmation", type="string", example="newpassword456")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Mot de passe modifié",
+     *         @OA\JsonContent(ref="#/components/schemas/Success")
+     *     ),
+     *     @OA\Response(response=422, description="Ancien mot de passe incorrect")
+     * )
+     */
+
     // POST /api/change-password
     public function changePassword(Request $request)
     {
         $request->validate([
             'ancien_mot_de_passe' => 'required|string',
-            'nouveau_mot_de_passe'=> 'required|string|min:8|confirmed',
+            'nouveau_mot_de_passe' => 'required|string|min:8|confirmed',
         ]);
 
         $user = $request->user();
