@@ -1,0 +1,3261 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "EgliseHub API",
+        "description": "Plateforme web multi-ministères chrétiens — République centrafricaine",
+        "contact": {
+            "name": "EgliseHub Support",
+            "email": "admin@eglisehub.org"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000/api",
+            "description": "Serveur local de développement"
+        },
+        {
+            "url": "http://127.0.0.1:8000/api",
+            "description": "Local développement"
+        },
+        {
+            "url": "https://api.eglisehub.org/api",
+            "description": "Production"
+        }
+    ],
+    "paths": {
+        "/login": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Connexion utilisateur",
+                "description": "Retourne un token Sanctum valide",
+                "operationId": "67d6d0fdd54fba132e1b6f55ca254183",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@eglisehub.org"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "1|abc123"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Identifiants incorrects"
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Déconnexion",
+                "operationId": "28d48c13fca984400ac8de99f54ee13a",
+                "responses": {
+                    "200": {
+                        "description": "Déconnecté",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/me": {
+            "get": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Profil de l'utilisateur connecté",
+                "operationId": "bc2032a379aa97707ccc61511897c120",
+                "responses": {
+                    "200": {
+                        "description": "Profil retourné",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/change-password": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Changer le mot de passe",
+                "operationId": "33cde1dae105c834f2e6b4791447f88e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "ancien_mot_de_passe",
+                                    "nouveau_mot_de_passe",
+                                    "nouveau_mot_de_passe_confirmation"
+                                ],
+                                "properties": {
+                                    "ancien_mot_de_passe": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    },
+                                    "nouveau_mot_de_passe": {
+                                        "type": "string",
+                                        "example": "newpassword456"
+                                    },
+                                    "nouveau_mot_de_passe_confirmation": {
+                                        "type": "string",
+                                        "example": "newpassword456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mot de passe modifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Ancien mot de passe incorrect"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/ministeres": {
+            "get": {
+                "tags": [
+                    "Ministères"
+                ],
+                "summary": "Liste tous les ministères",
+                "operationId": "f5a104859945299361c8ab0c66e72f31",
+                "parameters": [
+                    {
+                        "name": "statut",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "actif",
+                                "inactif",
+                                "suspendu"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "eglise",
+                                "ministere",
+                                "organisation",
+                                "para_ecclesial",
+                                "mission"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste paginée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Paginated"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé — Super Admin uniquement"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Ministères"
+                ],
+                "summary": "Créer un ministère",
+                "operationId": "006d1e200d44e9a798c558d33fce9375",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nom",
+                                    "type",
+                                    "sous_domaine"
+                                ],
+                                "properties": {
+                                    "nom": {
+                                        "type": "string",
+                                        "example": "Église Victoire"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "eglise",
+                                            "ministere",
+                                            "organisation",
+                                            "para_ecclesial",
+                                            "mission"
+                                        ]
+                                    },
+                                    "sous_domaine": {
+                                        "type": "string",
+                                        "example": "eglise-victoire"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "couleur_primaire": {
+                                        "type": "string",
+                                        "example": "#1E3A8A"
+                                    },
+                                    "couleur_secondaire": {
+                                        "type": "string",
+                                        "example": "#FFFFFF"
+                                    },
+                                    "email_contact": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "nullable": true
+                                    },
+                                    "telephone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "pays": {
+                                        "type": "string",
+                                        "example": "République centrafricaine"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ministère créé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Ministere"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation échouée"
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/ministeres/{id}": {
+            "get": {
+                "tags": [
+                    "Ministères"
+                ],
+                "summary": "Détail d'un ministère",
+                "operationId": "3026abfe5168574fc7d526ff19aac471",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ministère trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Ministere"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Non trouvé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Ministères"
+                ],
+                "summary": "Modifier un ministère",
+                "operationId": "73697c785a9e864c9a20572e9a6aa720",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nom": {
+                                        "type": "string"
+                                    },
+                                    "type": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "statut": {
+                                        "type": "string",
+                                        "enum": [
+                                            "actif",
+                                            "inactif",
+                                            "suspendu"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ministère modifié"
+                    },
+                    "404": {
+                        "description": "Non trouvé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Ministères"
+                ],
+                "summary": "Désactiver un ministère",
+                "operationId": "2e7f64aa1eb784593f753603ef66a98c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ministère désactivé"
+                    },
+                    "404": {
+                        "description": "Non trouvé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/ministeres/{id}/toggle": {
+            "patch": {
+                "tags": [
+                    "Ministères"
+                ],
+                "summary": "Activer ou désactiver un ministère",
+                "operationId": "48b88a6b757c46ee0afa7c77992deef9",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut modifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Ministère actif."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Ministere"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/ministeres/{id}/stats": {
+            "get": {
+                "tags": [
+                    "Ministères"
+                ],
+                "summary": "Statistiques d'un ministère",
+                "operationId": "e64657e98558921a853ba25054a1d610",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stats retournées",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/public/ministere": {
+            "get": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Récupérer un ministère par sous-domaine",
+                "description": "Route publique — aucune authentification requise",
+                "operationId": "e1ead6e2a8d447b9f3249f07c93d2bd5",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "description": "Sous-domaine du ministère",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ministère trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Ministere"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Ministère non trouvé ou inactif"
+                    }
+                }
+            }
+        },
+        "/ministry/pages": {
+            "get": {
+                "tags": [
+                    "Pages"
+                ],
+                "summary": "Liste les pages du ministère",
+                "description": "=====================================================\nPAGES\n=====================================================",
+                "operationId": "37adce032ca1c073e41c2a786484c7fc",
+                "parameters": [
+                    {
+                        "name": "statut",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "publie",
+                                "brouillon"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "description": "Super admin uniquement",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des pages",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Paginated"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Pages"
+                ],
+                "summary": "Créer une page",
+                "operationId": "bf470eb78c051284bc1f903ed49572e5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "titre"
+                                ],
+                                "properties": {
+                                    "titre": {
+                                        "type": "string",
+                                        "example": "À propos"
+                                    },
+                                    "contenu": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "dans_menu": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "ordre_menu": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "statut": {
+                                        "type": "string",
+                                        "enum": [
+                                            "publie",
+                                            "brouillon"
+                                        ],
+                                        "example": "brouillon"
+                                    },
+                                    "meta_titre": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ministere_id": {
+                                        "description": "Super admin uniquement",
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Page créée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Page"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/pages/{id}": {
+            "put": {
+                "tags": [
+                    "Pages"
+                ],
+                "summary": "Modifier une page",
+                "operationId": "4cadfc27c28bb42a18ecd021b141b752",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "titre": {
+                                        "type": "string"
+                                    },
+                                    "contenu": {
+                                        "type": "string"
+                                    },
+                                    "statut": {
+                                        "type": "string",
+                                        "enum": [
+                                            "publie",
+                                            "brouillon"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Page modifiée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Pages"
+                ],
+                "summary": "Supprimer une page",
+                "operationId": "b0195b56464339f1cfde22426dd685fc",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Page supprimée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/pages/{id}/publish": {
+            "patch": {
+                "tags": [
+                    "Pages"
+                ],
+                "summary": "Publier une page",
+                "operationId": "ac2a90d5129cd6256b707f8767728f9d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Page publiée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/pages/{id}/unpublish": {
+            "patch": {
+                "tags": [
+                    "Pages"
+                ],
+                "summary": "Dépublier une page",
+                "operationId": "ae7f59e71e81e5d907d4507ff810ff20",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Page dépubliée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/pages/reorder": {
+            "post": {
+                "tags": [
+                    "Pages"
+                ],
+                "summary": "Réordonner les pages du menu",
+                "operationId": "41a524c286882f0cef13b673836d3f03",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "pages": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer",
+                                                    "example": 1
+                                                },
+                                                "ordre": {
+                                                    "type": "integer",
+                                                    "example": 0
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Ordre mis à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/public/pages": {
+            "get": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Pages publiques d'un ministère",
+                "operationId": "1b264ab226a734adf879848b987a96ea",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pages du menu public"
+                    }
+                }
+            }
+        },
+        "/public/pages/{slug}": {
+            "get": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Détail d'une page publique",
+                "operationId": "4461fcbdb1cbe37e24974e04ea1d40a0",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Page trouvée"
+                    },
+                    "404": {
+                        "description": "Page non trouvée"
+                    }
+                }
+            }
+        },
+        "/ministry/articles": {
+            "get": {
+                "tags": [
+                    "Articles"
+                ],
+                "summary": "Liste les articles",
+                "operationId": "c2029c97f6652020b9d16b71e0f7bf65",
+                "parameters": [
+                    {
+                        "name": "statut",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "publie",
+                                "brouillon"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "type_contenu",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "texte",
+                                "lien_externe",
+                                "video_youtube",
+                                "audio",
+                                "mixte"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "en_avant",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste paginée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Paginated"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Articles"
+                ],
+                "summary": "Créer un article",
+                "operationId": "238edeed620977e58837f61a86521a79",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "titre",
+                                    "type_contenu"
+                                ],
+                                "properties": {
+                                    "titre": {
+                                        "type": "string",
+                                        "example": "Prédication du dimanche"
+                                    },
+                                    "type_contenu": {
+                                        "type": "string",
+                                        "enum": [
+                                            "texte",
+                                            "lien_externe",
+                                            "video_youtube",
+                                            "audio",
+                                            "mixte"
+                                        ]
+                                    },
+                                    "resume": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "contenu": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "youtube_id": {
+                                        "type": "string",
+                                        "example": "dQw4w9WgXcQ",
+                                        "nullable": true
+                                    },
+                                    "url_externe": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "categorie": {
+                                        "type": "string",
+                                        "example": "Enseignements",
+                                        "nullable": true
+                                    },
+                                    "duree": {
+                                        "type": "string",
+                                        "example": "45 min",
+                                        "nullable": true
+                                    },
+                                    "en_avant": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "statut": {
+                                        "type": "string",
+                                        "enum": [
+                                            "publie",
+                                            "brouillon"
+                                        ],
+                                        "example": "brouillon"
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Article créé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Article"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/articles/{id}": {
+            "put": {
+                "tags": [
+                    "Articles"
+                ],
+                "summary": "Modifier un article",
+                "operationId": "48776e204078dd7abe1a12f4cb943a72",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "titre": {
+                                        "type": "string"
+                                    },
+                                    "type_contenu": {
+                                        "type": "string"
+                                    },
+                                    "statut": {
+                                        "type": "string",
+                                        "enum": [
+                                            "publie",
+                                            "brouillon"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Article modifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Articles"
+                ],
+                "summary": "Supprimer un article",
+                "operationId": "ddedfac29def62d29f1843319fece6f5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Article supprimé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/articles/{id}/publish": {
+            "patch": {
+                "tags": [
+                    "Articles"
+                ],
+                "summary": "Publier un article",
+                "operationId": "9534efccd66555e0d1d006bdfe574d84",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Article publié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/articles/{id}/feature": {
+            "patch": {
+                "tags": [
+                    "Articles"
+                ],
+                "summary": "Mettre en avant / retirer",
+                "operationId": "09c7774dd7b51f01114206f62ef9623e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut mis en avant modifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/public/articles": {
+            "get": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Articles publics d'un ministère",
+                "operationId": "bc8a4e0a1f6722dca654507ec629b7f8",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    },
+                    {
+                        "name": "type_contenu",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "en_avant",
+                        "in": "query",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Articles paginés"
+                    }
+                }
+            }
+        },
+        "/public/articles/{slug}": {
+            "get": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Détail article public (incrémente les vues)",
+                "operationId": "12d47e65a4cc000e1175fdb16606b0ec",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Article trouvé"
+                    }
+                }
+            }
+        },
+        "/ministry/events": {
+            "get": {
+                "tags": [
+                    "Événements"
+                ],
+                "summary": "Liste les événements",
+                "operationId": "03dc069030870702475744ae9df15545",
+                "parameters": [
+                    {
+                        "name": "statut",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "a_venir",
+                                "en_cours",
+                                "termine",
+                                "annule"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "categorie",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ponctuel",
+                                "recurrent",
+                                "permanent",
+                                "saison"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste paginée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Événements"
+                ],
+                "summary": "Créer un événement",
+                "operationId": "86396d65b5f8f0456ea2dbb4676b5b99",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "titre",
+                                    "categorie"
+                                ],
+                                "properties": {
+                                    "titre": {
+                                        "type": "string",
+                                        "example": "Culte du dimanche"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "categorie": {
+                                        "type": "string",
+                                        "enum": [
+                                            "ponctuel",
+                                            "recurrent",
+                                            "permanent",
+                                            "saison"
+                                        ]
+                                    },
+                                    "frequence": {
+                                        "type": "string",
+                                        "enum": [
+                                            "aucune",
+                                            "quotidien",
+                                            "hebdomadaire",
+                                            "bimensuel",
+                                            "mensuel",
+                                            "annuel"
+                                        ],
+                                        "example": "hebdomadaire"
+                                    },
+                                    "jours_semaine": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "dimanche"
+                                        ],
+                                        "nullable": true
+                                    },
+                                    "heure_debut": {
+                                        "type": "string",
+                                        "example": "09:00"
+                                    },
+                                    "heure_fin": {
+                                        "type": "string",
+                                        "example": "12:00"
+                                    },
+                                    "lieu": {
+                                        "type": "string",
+                                        "example": "Temple Central CRC"
+                                    },
+                                    "mode": {
+                                        "type": "string",
+                                        "enum": [
+                                            "presentiel",
+                                            "en_ligne",
+                                            "hybride"
+                                        ],
+                                        "example": "hybride"
+                                    },
+                                    "lien_streaming": {
+                                        "type": "string",
+                                        "example": "https://youtube.com/live/crc",
+                                        "nullable": true
+                                    },
+                                    "est_gratuit": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "inscription_requise": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Événement créé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Evenement"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/events/{id}": {
+            "put": {
+                "tags": [
+                    "Événements"
+                ],
+                "summary": "Modifier un événement",
+                "operationId": "b906551557c0a7032793a4f3873c601b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Événement modifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Événements"
+                ],
+                "summary": "Supprimer un événement",
+                "operationId": "982e5a55a79a7e5f6d9bdf81d36878ad",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Événement supprimé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/events/{id}/cancel": {
+            "patch": {
+                "tags": [
+                    "Événements"
+                ],
+                "summary": "Annuler un événement",
+                "operationId": "fdcf63736adc56070685baaf784423bd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Événement annulé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/public/events": {
+            "get": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Événements publics",
+                "operationId": "88f40b45268d57717915b5b18f04498a",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Événements paginés"
+                    }
+                }
+            }
+        },
+        "/ministry/media": {
+            "get": {
+                "tags": [
+                    "Médias"
+                ],
+                "summary": "Liste les médias",
+                "operationId": "8e9d0492b150cd83ea73137116a7e5b2",
+                "parameters": [
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "image",
+                                "video",
+                                "audio",
+                                "document"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Médias paginés"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/media/upload": {
+            "post": {
+                "tags": [
+                    "Médias"
+                ],
+                "summary": "Uploader un fichier",
+                "operationId": "dda2283b8dd354d4ced1bd695b99acb5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "fichier"
+                                ],
+                                "properties": {
+                                    "fichier": {
+                                        "description": "Fichier à uploader (max 10MB)",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "categorie": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "alt_text": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Fichier uploadé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Media"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/media/{id}": {
+            "delete": {
+                "tags": [
+                    "Médias"
+                ],
+                "summary": "Supprimer un média",
+                "operationId": "6005a8a6cec0666cb3702cf71a525e6d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Média supprimé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/media/bulk-delete": {
+            "post": {
+                "tags": [
+                    "Médias"
+                ],
+                "summary": "Suppression multiple",
+                "operationId": "b5998fc8e540dd16f5fdea7288b54bde",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            3
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Médias supprimés"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/public/contact": {
+            "post": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Envoyer un message de contact",
+                "operationId": "fc8f8c30c04ddb21f2a03482a52afa09",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subdomain",
+                                    "nom_expediteur",
+                                    "email",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "subdomain": {
+                                        "type": "string",
+                                        "example": "crc"
+                                    },
+                                    "nom_expediteur": {
+                                        "type": "string",
+                                        "example": "Jean Dupont"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "jean@example.com"
+                                    },
+                                    "telephone": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "sujet": {
+                                        "type": "string",
+                                        "example": "Demande d'information",
+                                        "nullable": true
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Bonjour, je voudrais..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Message envoyé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Success"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Ministère non trouvé"
+                    }
+                }
+            }
+        },
+        "/ministry/contact-messages": {
+            "get": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Liste les messages reçus",
+                "operationId": "2d81df5f8aad403eef45d4594c69a17c",
+                "parameters": [
+                    {
+                        "name": "statut",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "non_lu",
+                                "lu",
+                                "repondu"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Messages paginés"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/contact-messages/{id}/read": {
+            "patch": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Marquer comme lu",
+                "operationId": "03c81f3f6aa0c135b5bb4545b99b9160",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Marqué comme lu"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/contact-messages/{id}/reply": {
+            "post": {
+                "tags": [
+                    "Messages"
+                ],
+                "summary": "Répondre à un message",
+                "operationId": "6d43736e2deb38919a692fb88b94dd19",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reponse"
+                                ],
+                                "properties": {
+                                    "reponse": {
+                                        "type": "string",
+                                        "example": "Bonjour Jean, merci pour votre message..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Réponse enregistrée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Dashboard super admin",
+                "operationId": "d04d4cb69c686e7ae4f7b7de79e74b3d",
+                "responses": {
+                    "200": {
+                        "description": "Stats globales de la plateforme"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/dashboard": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Dashboard ministère",
+                "operationId": "2cd5c27f9266c948afa58327a23d85e5",
+                "parameters": [
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "description": "Super admin uniquement",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stats du ministère"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/stats/content": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Stats contenus détaillées",
+                "operationId": "7e7c64b00c7d973dc47d8663b96d3646",
+                "parameters": [
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stats par catégorie, type, vues"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/stats/engagement": {
+            "get": {
+                "tags": [
+                    "Dashboard"
+                ],
+                "summary": "Stats engagement",
+                "operationId": "172b9b85b8794c05b7f9d7e0aa8940c5",
+                "parameters": [
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Messages, vues, top articles"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/settings": {
+            "get": {
+                "tags": [
+                    "Paramètres"
+                ],
+                "summary": "Tous les paramètres du ministère",
+                "operationId": "5fdfa303b124edc650a09e141822de11",
+                "parameters": [
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paramètres général, thème, SEO, réseaux sociaux"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/settings/theme": {
+            "put": {
+                "tags": [
+                    "Paramètres"
+                ],
+                "summary": "Mettre à jour le thème",
+                "operationId": "e51462001576d19f1d08cd37b74a8250",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "couleur_primaire": {
+                                        "type": "string",
+                                        "example": "#1E3A8A"
+                                    },
+                                    "couleur_secondaire": {
+                                        "type": "string",
+                                        "example": "#FFFFFF"
+                                    },
+                                    "couleur_menu": {
+                                        "type": "string",
+                                        "example": "#1E3A8A"
+                                    },
+                                    "police_titre": {
+                                        "type": "string",
+                                        "example": "Poppins"
+                                    },
+                                    "style_boutons": {
+                                        "type": "string",
+                                        "enum": [
+                                            "rounded",
+                                            "square",
+                                            "pill"
+                                        ]
+                                    },
+                                    "logo": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Thème mis à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/settings/seo": {
+            "put": {
+                "tags": [
+                    "Paramètres"
+                ],
+                "summary": "Mettre à jour le SEO",
+                "operationId": "3c6a3252df09a838604ac2dc8434e826",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "meta_titre": {
+                                        "type": "string",
+                                        "example": "CRC Bangui"
+                                    },
+                                    "meta_description": {
+                                        "type": "string",
+                                        "example": "Ministère chrétien..."
+                                    },
+                                    "meta_keywords": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "google_analytics": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "indexable": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "SEO mis à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/settings/social": {
+            "put": {
+                "tags": [
+                    "Paramètres"
+                ],
+                "summary": "Mettre à jour les réseaux sociaux",
+                "operationId": "93f417463dca68075359a326c3c81874",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "facebook": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "youtube": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "whatsapp": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "instagram": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Réseaux sociaux mis à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "tags": [
+                    "Utilisateurs"
+                ],
+                "summary": "Liste tous les utilisateurs (Super Admin)",
+                "operationId": "2f8162d1d18688b37f81aae361c95700",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "super_admin",
+                                "admin_ministere"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Utilisateurs paginés"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Utilisateurs"
+                ],
+                "summary": "Créer un utilisateur (Super Admin)",
+                "operationId": "4502cf5bbd90cfa14a451a32b520fe6e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password",
+                                    "role"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Mologbama"
+                                    },
+                                    "prenom": {
+                                        "type": "string",
+                                        "example": "Abishadai"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@crc.org"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    },
+                                    "role": {
+                                        "type": "string",
+                                        "enum": [
+                                            "super_admin",
+                                            "admin_ministere"
+                                        ]
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1,
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Utilisateur créé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{id}/impersonate": {
+            "post": {
+                "tags": [
+                    "Utilisateurs"
+                ],
+                "summary": "Se connecter en tant qu'un utilisateur",
+                "operationId": "a933d3d0ba41a3795ff1da6a66b91a3a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Token de l'utilisateur impersonné retourné"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/faq": {
+            "get": {
+                "tags": [
+                    "FAQ"
+                ],
+                "summary": "Liste les FAQs",
+                "operationId": "7514a6cc54a47565c4782c2f9b1ab350",
+                "parameters": [
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "FAQs listées"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "FAQ"
+                ],
+                "summary": "Créer une FAQ",
+                "operationId": "62970a075562c45435655c227dc28d20",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "question",
+                                    "reponse"
+                                ],
+                                "properties": {
+                                    "question": {
+                                        "type": "string",
+                                        "example": "Où vous situez-vous ?"
+                                    },
+                                    "reponse": {
+                                        "type": "string",
+                                        "example": "Fatima Sandoumbé, Bangui."
+                                    },
+                                    "categorie": {
+                                        "type": "string",
+                                        "example": "Localisation",
+                                        "nullable": true
+                                    },
+                                    "ordre": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "FAQ créée"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/faq/{id}/toggle": {
+            "patch": {
+                "tags": [
+                    "FAQ"
+                ],
+                "summary": "Activer/désactiver une FAQ",
+                "operationId": "7c0c8dc4a2981c6f6f048090f8a76751",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut modifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/public/faq": {
+            "get": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "FAQs publiques d'un ministère",
+                "operationId": "52a08073923ba8e57a490a2fe57db4b6",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "FAQs actives"
+                    }
+                }
+            }
+        },
+        "/notifications": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Liste mes notifications",
+                "operationId": "29eb2ba00fd610e97b2984a60501991a",
+                "parameters": [
+                    {
+                        "name": "lu",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "true",
+                                "false"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Notifications paginées"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/notifications/unread-count": {
+            "get": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Nombre de notifications non lues",
+                "operationId": "fe9e3612731594f5a4e97a68091cd8ff",
+                "responses": {
+                    "200": {
+                        "description": "Compteur retourné",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "count": {
+                                                    "type": "integer",
+                                                    "example": 3
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/notifications/mark-all-read": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Tout marquer comme lu",
+                "operationId": "4569d9d91f4d77c7cbf5a093a8707cfb",
+                "responses": {
+                    "200": {
+                        "description": "Toutes les notifications marquées lues"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/logs": {
+            "get": {
+                "tags": [
+                    "Logs"
+                ],
+                "summary": "Liste les logs d'activité (Super Admin)",
+                "operationId": "bdb14773433560ef3b2691699f82d32d",
+                "parameters": [
+                    {
+                        "name": "module",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "date_debut",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_fin",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logs paginés"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/logs/export": {
+            "get": {
+                "tags": [
+                    "Logs"
+                ],
+                "summary": "Exporter les logs en CSV",
+                "operationId": "96d99cbbf7215b63444c290faaebdb2a",
+                "parameters": [
+                    {
+                        "name": "date_debut",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "date_fin",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fichier CSV téléchargé",
+                        "content": {
+                            "text/csv": {}
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/admin/logs/clean": {
+            "post": {
+                "tags": [
+                    "Logs"
+                ],
+                "summary": "Nettoyer les vieux logs",
+                "operationId": "f92811869bcc0ab0700439c9ba6d5dba",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "jours"
+                                ],
+                                "properties": {
+                                    "jours": {
+                                        "description": "Supprimer les logs plus vieux que N jours",
+                                        "type": "integer",
+                                        "example": 30
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Logs supprimés"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Success": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Opération réussie."
+                    }
+                },
+                "type": "object"
+            },
+            "Paginated": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "data": {
+                        "properties": {
+                            "current_page": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "per_page": {
+                                "type": "integer",
+                                "example": 15
+                            },
+                            "total": {
+                                "type": "integer",
+                                "example": 42
+                            },
+                            "data": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object"
+                                }
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "Ministere": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nom": {
+                        "type": "string",
+                        "example": "Centre Révélation du Christ"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "eglise",
+                            "ministere",
+                            "organisation",
+                            "para_ecclesial",
+                            "mission"
+                        ]
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "centre-revelation-du-christ"
+                    },
+                    "sous_domaine": {
+                        "type": "string",
+                        "example": "crc"
+                    },
+                    "couleur_primaire": {
+                        "type": "string",
+                        "example": "#1E3A8A"
+                    },
+                    "couleur_secondaire": {
+                        "type": "string",
+                        "example": "#FFFFFF"
+                    },
+                    "statut": {
+                        "type": "string",
+                        "enum": [
+                            "actif",
+                            "inactif",
+                            "suspendu"
+                        ]
+                    },
+                    "pages_count": {
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "articles_count": {
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "evenements_count": {
+                        "type": "integer",
+                        "example": 2
+                    }
+                },
+                "type": "object"
+            },
+            "Article": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "titre": {
+                        "type": "string",
+                        "example": "Message du pasteur"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "message-du-pasteur"
+                    },
+                    "type_contenu": {
+                        "type": "string",
+                        "enum": [
+                            "texte",
+                            "lien_externe",
+                            "video_youtube",
+                            "audio",
+                            "mixte"
+                        ]
+                    },
+                    "youtube_id": {
+                        "type": "string",
+                        "example": "dQw4w9WgXcQ",
+                        "nullable": true
+                    },
+                    "url_externe": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "statut": {
+                        "type": "string",
+                        "enum": [
+                            "publie",
+                            "brouillon"
+                        ]
+                    },
+                    "vues": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "en_avant": {
+                        "type": "boolean",
+                        "example": false
+                    }
+                },
+                "type": "object"
+            },
+            "Evenement": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "titre": {
+                        "type": "string",
+                        "example": "Culte du dimanche"
+                    },
+                    "categorie": {
+                        "type": "string",
+                        "enum": [
+                            "ponctuel",
+                            "recurrent",
+                            "permanent",
+                            "saison"
+                        ]
+                    },
+                    "frequence": {
+                        "type": "string",
+                        "enum": [
+                            "aucune",
+                            "quotidien",
+                            "hebdomadaire",
+                            "bimensuel",
+                            "mensuel",
+                            "annuel"
+                        ]
+                    },
+                    "heure_debut": {
+                        "type": "string",
+                        "example": "09:00"
+                    },
+                    "mode": {
+                        "type": "string",
+                        "enum": [
+                            "presentiel",
+                            "en_ligne",
+                            "hybride"
+                        ]
+                    },
+                    "est_gratuit": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Mologbama"
+                    },
+                    "prenom": {
+                        "type": "string",
+                        "example": "Abishadai"
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "admin@crc.org"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "super_admin",
+                            "admin_ministere"
+                        ]
+                    },
+                    "ministere_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "actif": {
+                        "type": "boolean",
+                        "example": true
+                    }
+                },
+                "type": "object"
+            },
+            "Page": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "titre": {
+                        "type": "string",
+                        "example": "Accueil"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "accueil"
+                    },
+                    "statut": {
+                        "type": "string",
+                        "enum": [
+                            "publie",
+                            "brouillon"
+                        ]
+                    },
+                    "dans_menu": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "ordre_menu": {
+                        "type": "integer",
+                        "example": 0
+                    }
+                },
+                "type": "object"
+            },
+            "Media": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nom_original": {
+                        "type": "string",
+                        "example": "photo.jpg"
+                    },
+                    "url": {
+                        "type": "string",
+                        "example": "/storage/ministeres/1/images/uuid.jpg"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "image",
+                            "video",
+                            "audio",
+                            "document"
+                        ]
+                    },
+                    "taille": {
+                        "type": "integer",
+                        "example": 204800
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Auth",
+            "description": "Authentification"
+        },
+        {
+            "name": "Ministères",
+            "description": "Gestion des ministères (Super Admin)"
+        },
+        {
+            "name": "Pages",
+            "description": "Gestion des pages"
+        },
+        {
+            "name": "Articles",
+            "description": "Articles et prédications"
+        },
+        {
+            "name": "Événements",
+            "description": "Événements et cultes"
+        },
+        {
+            "name": "Médias",
+            "description": "Upload et médias"
+        },
+        {
+            "name": "Messages",
+            "description": "Messages de contact"
+        },
+        {
+            "name": "Utilisateurs",
+            "description": "Gestion des utilisateurs"
+        },
+        {
+            "name": "Paramètres",
+            "description": "Thème, SEO, réseaux sociaux"
+        },
+        {
+            "name": "Dashboard",
+            "description": "Statistiques"
+        },
+        {
+            "name": "FAQ",
+            "description": "Questions fréquentes"
+        },
+        {
+            "name": "Logs",
+            "description": "Logs activité"
+        },
+        {
+            "name": "Notifications",
+            "description": "Notifications"
+        },
+        {
+            "name": "Public",
+            "description": "Routes publiques sans auth"
+        }
+    ],
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ]
+}
