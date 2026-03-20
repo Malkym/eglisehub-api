@@ -42,6 +42,7 @@ class ArticleController extends Controller
             'duree'          => 'nullable|string|max:20',
             'auteur_externe' => 'nullable|string|max:255',
             'en_avant'       => 'boolean',
+            'commentaires_actifs' => 'boolean', // AJOUTER
             'statut'         => 'in:publie,brouillon',
             'date_publication' => 'nullable|date',
         ]);
@@ -64,6 +65,7 @@ class ArticleController extends Controller
             'duree'            => $request->duree,
             'auteur_externe'   => $request->auteur_externe,
             'en_avant'         => $request->en_avant ?? false,
+            'commentaires_actifs' => $request->commentaires_actifs ?? true, // AJOUTER
             'statut'           => $request->statut ?? 'brouillon',
             'date_publication' => $request->statut === 'publie'
                 ? ($request->date_publication ?? now())
@@ -90,19 +92,19 @@ class ArticleController extends Controller
     public function update(Request $request, string $id)
     {
         $article = $this->findArticleForUser($request, $id);
-
         $request->validate([
-            'titre'          => 'sometimes|string|max:255',
-            'type_contenu'   => 'sometimes|in:texte,lien_externe,video_youtube,audio,mixte',
+            'titre'          => 'required|string|max:255',
+            'type_contenu'   => 'required|in:texte,lien_externe,video_youtube,audio,mixte',
             'resume'         => 'nullable|string|max:500',
             'contenu'        => 'nullable|string',
             'image_une'      => 'nullable|string',
             'categorie'      => 'nullable|string|max:100',
-            'url_externe'    => 'nullable|url',
-            'youtube_id'     => 'nullable|string|max:20',
+            'url_externe'    => 'required_if:type_contenu,lien_externe|nullable|url',
+            'youtube_id'     => 'required_if:type_contenu,video_youtube|nullable|string|max:20',
             'duree'          => 'nullable|string|max:20',
             'auteur_externe' => 'nullable|string|max:255',
             'en_avant'       => 'boolean',
+            'commentaires_actifs' => 'boolean', // AJOUTER
             'statut'         => 'in:publie,brouillon',
             'date_publication' => 'nullable|date',
         ]);
@@ -131,6 +133,7 @@ class ArticleController extends Controller
             'duree',
             'auteur_externe',
             'en_avant',
+            'commentaires_actifs',
             'statut',
             'date_publication',
         ]));
@@ -223,46 +226,6 @@ class ArticleController extends Controller
         return response()->json(['success' => true, 'message' => "Article {$etat}.", 'data' => $article->fresh()]);
     }
 
-    // GET /api/public/articles
-    public function publicIndex(Request $request)
-    {
-        $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
-
-        $articles = Article::whereHas(
-            'ministere',
-            fn($q) =>
-            $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
-        )
-            ->where('statut', 'publie')
-            ->with('auteur:id,name,prenom')
-            ->when($request->categorie,    fn($q) => $q->where('categorie', $request->categorie))
-            ->when($request->type_contenu, fn($q) => $q->where('type_contenu', $request->type_contenu))
-            ->when($request->en_avant,     fn($q) => $q->where('en_avant', true))
-            ->orderBy('date_publication', 'desc')
-            ->paginate(12);
-
-        return response()->json(['success' => true, 'data' => $articles]);
-    }
-
-    // GET /api/public/articles/{slug}
-    public function publicShow(Request $request, string $slug)
-    {
-        $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
-
-        $article = Article::whereHas(
-            'ministere',
-            fn($q) =>
-            $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
-        )
-            ->where('slug', $slug)
-            ->where('statut', 'publie')
-            ->firstOrFail();
-
-        // Incrémenter les vues
-        $article->increment('vues');
-
-        return response()->json(['success' => true, 'data' => $article->load('auteur:id,name,prenom')]);
-    }
 
     // Helpers
     private function getMinistereId(Request $request): ?int
@@ -310,9 +273,192 @@ class ArticleController extends Controller
         return $slug;
     }
 
-    private function log(Request $request, string $action, string $module, string $details): void
+    /**
+     * @OA\Get(
+     *     path="/public/articles/{slug}/rating",
+     *     tags={"Public - Articles"},
+     *     summary="Récupérer la note moyenne d'un article",
+     *     @OA\Parameter(name="slug", in="path", required=true, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="subdomain", in="query", @OA\Schema(type="string", example="crc")),
+     *     @OA\Response(response=200, description="Note moyenne",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="average", type="number", format="float", example=4.5),
+     *                 @OA\Property(property="count", type="integer", example=12)
+     *             )
+     *         )
+     *     )
+     * )
+     */
+
+    /**
+     * GET /api/public/articles/{slug}/rating
+     * Récupérer la note moyenne d'un article
+     */
+    public function getRating(Request $request, string $slug)
     {
-        LogAction::create([
+        $subdomain = $request->query('subdomain') ?? 'crc';
+
+        $article = Article::whereHas(
+            'ministere',
+            fn($q) =>
+            $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+        )->where('slug', $slug)->where('statut', 'publie')->firstOrFail();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'average' => round($article->average_rating, 1),
+                'count' => $article->rating_count,
+            ]
+        ]);
+    }
+
+    /**
+     * @OA\Post(
+     *     path="/public/articles/{slug}/rate",
+     *     tags={"Public - Articles"},
+     *     summary="Noter un article",
+     *     @OA\Parameter(name="slug", in="path", required=true, @OA\Schema(type="string")),
+     *     @OA\Parameter(name="subdomain", in="query", @OA\Schema(type="string", example="crc")),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="note", type="integer", minimum=1, maximum=5, example=5)
+     *         )
+     *     ),
+     *     @OA\Response(response=200, description="Note enregistrée",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Merci pour votre note !"),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="average", type="number", format="float", example=4.5),
+     *                 @OA\Property(property="count", type="integer", example=13)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(response=429, description="Déjà noté",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Vous avez déjà noté cet article.")
+     *         )
+     *     )
+     * )
+     */
+
+    /**
+     * POST /api/public/articles/{slug}/rate
+     * Noter un article
+     */
+    public function rate(Request $request, string $slug)
+    {
+        $request->validate([
+            'note' => 'required|integer|min:1|max:5',
+        ]);
+
+        $subdomain = $request->query('subdomain') ?? 'crc';
+
+        $article = Article::whereHas(
+            'ministere',
+            fn($q) =>
+            $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+        )->where('slug', $slug)->where('statut', 'publie')->firstOrFail();
+
+        // Récupérer l'IP et la session
+        $ip = $request->ip();
+        $sessionId = $request->header('X-Session-Id') ?? session()->getId();
+
+        // Vérifier si l'utilisateur a déjà voté
+        if ($article->hasUserRated($ip, $sessionId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous avez déjà noté cet article.'
+            ], 429);
+        }
+
+        // Ajouter la note
+        $article->addRating($request->note, $ip, $sessionId);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Merci pour votre note !',
+            'data' => [
+                'average' => round($article->fresh()->average_rating, 1),
+                'count' => $article->fresh()->rating_count,
+            ]
+        ]);
+    }
+
+    public function publicIndex(Request $request)
+    {
+        $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
+
+        $query = Article::whereHas(
+            'ministere',
+            fn($q) => $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+        )
+            ->where('statut', 'publie')
+            ->with('auteur:id,name,prenom')
+            ->withAvg('notes', 'note')
+            ->withCount('notes')
+            ->withCount(['tousCommentaires as commentaires_count' => function ($q) {
+                $q->where('statut', 'approuve');
+            }]);
+
+        // Support pour plusieurs catégories (séparées par des virgules)
+        if ($request->has('categories')) {
+            $categories = explode(',', $request->categories);
+            $query->whereIn('categorie', $categories);
+        } elseif ($request->has('categorie')) {
+            $query->where('categorie', $request->categorie);
+        }
+
+        if ($request->has('type_contenu')) {
+            $query->where('type_contenu', $request->type_contenu);
+        }
+
+        if ($request->has('en_avant')) {
+            $query->where('en_avant', true);
+        }
+
+        if ($request->has('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('titre', 'like', "%{$request->search}%")
+                    ->orWhere('contenu', 'like', "%{$request->search}%");
+            });
+        }
+
+        $articles = $query->orderBy('date_publication', 'desc')->paginate($request->per_page ?? 12);
+
+        return response()->json(['success' => true, 'data' => $articles]);
+    }
+
+    // Mettre à jour la méthode publicShow pour inclure les notes
+    public function publicShow(Request $request, string $slug)
+    {
+        $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
+
+        $article = Article::whereHas(
+            'ministere',
+            fn($q) => $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+        )
+            ->where('slug', $slug)
+            ->where('statut', 'publie')
+            ->with('auteur:id,name,prenom')
+            ->withAvg('notes', 'note')
+            ->withCount('notes')
+            ->firstOrFail();
+
+        // Incrémenter les vues
+        $article->increment('vues');
+
+        return response()->json(['success' => true, 'data' => $article->load('auteur:id,name,prenom')]);
+    }
+
+    private function log(Request $request, string $action, string $module, string $details, ?string $lien = null): void
+    {
+        $log = LogAction::create([
             'user_id'      => $request->user()->id,
             'ministere_id' => $request->user()->ministere_id,
             'action'       => $action,
@@ -320,6 +466,15 @@ class ArticleController extends Controller
             'details'      => $details,
             'ip'           => $request->ip(),
             'date_action'  => now(),
+        ]);
+
+        // Envoyer les notifications
+        $ministere = $request->user()->ministere;
+        LogAction::notifyForAction($action, [
+            'ministere_id' => $request->user()->ministere_id,
+            'ministere_nom' => $ministere?->nom,
+            'details' => $details,
+            'lien' => $lien,
         ]);
     }
 }

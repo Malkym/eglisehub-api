@@ -2,14 +2,31 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\NotifHelper;
 use App\Http\Controllers\Controller;
+use App\Models\LogAction;
 use App\Models\MessageContact;
 use App\Models\Ministere;
-use App\Models\LogAction;
 use Illuminate\Http\Request;
 
 class MessageContactController extends Controller
 {
+    public function allReplies(Request $request)
+    {
+        $ministereId = $this->getMinistereId($request);
+
+        $reponses = \App\Models\MessageReponse::with(['message', 'user'])
+            ->when($ministereId, function ($q) use ($ministereId) {
+                $q->whereHas('message', function ($sub) use ($ministereId) {
+                    $sub->where('ministere_id', $ministereId);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return response()->json(['success' => true, 'data' => $reponses]);
+    }
+
     // GET /api/ministry/contact-messages
     public function index(Request $request)
     {
@@ -73,7 +90,6 @@ class MessageContactController extends Controller
     }
 
     // PATCH /api/ministry/contact-messages/{id}/reply
-    // Correction complète de la méthode reply
     public function reply(Request $request, string $id)
     {
         $request->validate([
@@ -103,6 +119,15 @@ class MessageContactController extends Controller
         if (! $message->lu_le) {
             $message->update(['lu_le' => now()]);
         }
+
+        NotifHelper::send(
+            $request->user()->id,
+            'Réponse envoyée',
+            "Votre réponse à {$message->nom_expediteur} a été enregistrée.",
+            'success',
+            '/messages/' . $message->id,
+            'messages'
+        );
 
         $this->log(
             $request,
@@ -199,6 +224,69 @@ class MessageContactController extends Controller
             'details'      => $details,
             'ip'           => $request->ip(),
             'date_action'  => now(),
+        ]);
+    }
+
+    // POST /api/public/contact — Route publique
+    public function store(Request $request)
+    {
+        $request->validate([
+            'nom_expediteur' => 'required|string|max:255',
+            'email'          => 'required|email|max:255',
+            'sujet'          => 'nullable|string|max:255',
+            'message'        => 'required|string|min:5',
+            'telephone'      => 'nullable|string|max:20',
+        ]);
+
+        // Trouver le ministère via subdomain
+        $subdomain = $request->query('subdomain')
+            ?? $request->input('subdomain')
+            ?? 'crc';
+
+        $ministere = Ministere::where('sous_domaine', $subdomain)
+            ->where('statut', 'actif')
+            ->first();
+
+        if (!$ministere) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ministère introuvable.',
+            ], 404);
+        }
+
+        $message = MessageContact::create([
+            'ministere_id'   => $ministere->id,
+            'nom_expediteur' => $request->nom_expediteur,
+            'email'          => $request->email,
+            'telephone'      => $request->telephone,
+            'sujet'          => $request->sujet ?? 'Message depuis le site',
+            'message'        => $request->message,
+            'statut'         => 'non_lu',
+        ]);
+
+        // NOTIFICATION EN TEMPS RÉEL
+        NotifHelper::notifyMinistryAdmins(
+            $ministere->id,
+            'Nouveau message de ' . $request->nom_expediteur,
+            substr($request->message, 0, 80) . '...',
+            'message',
+            '/messages/' . $message->id,
+            'messages'
+        );
+
+        // Optionnel : Notifier les super admins aussi
+        NotifHelper::notifySuperAdmins(
+            'Nouveau message - ' . $ministere->nom,
+            $request->nom_expediteur . ' a envoyé un message',
+            'message',
+            '/messages/' . $message->id,
+            'messages'
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Message envoyé avec succès.',
+            'data'    => ['id' => $message->id],
         ]);
     }
 }

@@ -9,6 +9,24 @@ use Illuminate\Support\Facades\Hash;
 
 class ProfileController extends Controller
 {
+    /**
+     * @OA\Get(
+     *     path="/profile",
+     *     tags={"Profil"},
+     *     summary="Récupérer le profil de l'utilisateur connecté",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Profil retourné",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", ref="#/components/schemas/User")
+     *         )
+     *     ),
+     *     @OA\Response(response=401, description="Non authentifié")
+     * )
+     */
+
     // GET /api/profile
     public function show(Request $request)
     {
@@ -16,6 +34,33 @@ class ProfileController extends Controller
 
         return response()->json(['success' => true, 'data' => $user]);
     }
+
+    /**
+     * @OA\Put(
+     *     path="/profile",
+     *     tags={"Profil"},
+     *     summary="Mettre à jour le profil",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="name", type="string", example="Mologbama"),
+     *             @OA\Property(property="prenom", type="string", example="Abishadai"),
+     *             @OA\Property(property="email", type="string", format="email", example="mologbama@eglisehub.org")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Profil mis à jour",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Profil mis à jour."),
+     *             @OA\Property(property="data", ref="#/components/schemas/User")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Email déjà utilisé")
+     * )
+     */
+
 
     // PUT /api/profile
     public function update(Request $request)
@@ -47,6 +92,34 @@ class ProfileController extends Controller
         ]);
     }
 
+
+    /**
+     * @OA\Post(
+     *     path="/profile/change-password",
+     *     tags={"Profil"},
+     *     summary="Changer le mot de passe",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"ancien_mot_de_passe","nouveau_mot_de_passe","nouveau_mot_de_passe_confirmation"},
+     *             @OA\Property(property="ancien_mot_de_passe", type="string", example="password123"),
+     *             @OA\Property(property="nouveau_mot_de_passe", type="string", example="newpassword456"),
+     *             @OA\Property(property="nouveau_mot_de_passe_confirmation", type="string", example="newpassword456")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Mot de passe changé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Mot de passe mis à jour. Les autres sessions ont été déconnectées.")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Ancien mot de passe incorrect")
+     * )
+     */
+
     // POST /api/profile/change-password
     public function changePassword(Request $request)
     {
@@ -74,6 +147,21 @@ class ProfileController extends Controller
             'message' => 'Mot de passe mis à jour. Les autres sessions ont été déconnectées.',
         ]);
     }
+
+    /**
+     * @OA\Get(
+     *     path="/profile/activity",
+     *     tags={"Profil"},
+     *     summary="Historique des activités de l'utilisateur",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="page", in="query", @OA\Schema(type="integer")),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des activités",
+     *         @OA\JsonContent(ref="#/components/schemas/Paginated")
+     *     )
+     * )
+     */
 
     // GET /api/profile/activity
     public function activity(Request $request)

@@ -1,22 +1,26 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\MinistereController;
-use App\Http\Controllers\Api\PageController;
+use App\Http\Controllers\Api\ArticleCommentaireController;
 use App\Http\Controllers\Api\ArticleController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DonController;
 use App\Http\Controllers\Api\EvenementController;
+use App\Http\Controllers\Api\FaqController;
+use App\Http\Controllers\Api\LogController;
 use App\Http\Controllers\Api\MediaController;
 use App\Http\Controllers\Api\MessageContactController;
-use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\MinistereController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SettingController;
-use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\SliderController;
 use App\Http\Controllers\Api\TagController;
-use App\Http\Controllers\Api\LogController;
-use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\WorshipScheduleController;
+use Illuminate\Support\Facades\Route;
+
 
 // ============================================================
 // ROUTES PUBLIQUES
@@ -44,10 +48,30 @@ Route::get('/public/media', [MediaController::class, 'publicIndex']);
 // Formulaire de contact
 Route::post('/public/contact', [MessageContactController::class, 'publicStore']);
 
-// 
-Route::get('/public/faq',     [FaqController::class,    'publicIndex']);
+// FAQ, Sliders, Tags
+Route::get('/public/faq',     [FaqController::class, 'publicIndex']);
 Route::get('/public/sliders', [SliderController::class, 'publicIndex']);
-Route::get('/public/tags',    [TagController::class,    'publicIndex']);
+Route::get('/public/tags',    [TagController::class, 'publicIndex']);
+
+// La route doit être dans le groupe /public
+Route::get('/public/worship-schedules', [WorshipScheduleController::class, 'publicIndex']);  // <-- AJOUTER /public/
+
+// Settings publics
+Route::get('/public/settings', [SettingController::class, 'publicSettings']);
+
+Route::get('/public/gallery', [SliderController::class, 'publicGallery']);
+
+// Dons
+Route::post('/public/dons', [DonController::class, 'store']);
+
+// ===== COMMENTAIRES ET NOTES (ROUTES PUBLIQUES) =====
+Route::prefix('public/articles')->group(function () {
+    Route::get('{slug}/comments', [ArticleCommentaireController::class, 'publicIndex']);
+    Route::post('{slug}/comments', [ArticleCommentaireController::class, 'publicStore']);
+    Route::get('{slug}/rating', [ArticleController::class, 'getRating']);
+    Route::post('{slug}/rate', [ArticleController::class, 'rate']);
+});
+
 
 // ============================================================
 // ROUTES PROTÉGÉES
@@ -75,6 +99,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('ministeres/{id}/toggle', [MinistereController::class, 'toggle']);
         Route::get('ministeres/{id}/stats',    [MinistereController::class, 'stats']);
         Route::get('dashboard', [DashboardController::class, 'global']);
+
+        // Utilisateurs (super admin)
+        Route::get('users',                  [UserController::class, 'index']);
+        Route::post('users',                 [UserController::class, 'store']);
+        Route::get('users/{id}',             [UserController::class, 'show']);
+        Route::put('users/{id}',             [UserController::class, 'update']);
+        Route::delete('users/{id}',          [UserController::class, 'destroy']);
+        Route::patch('users/{id}/toggle',    [UserController::class, 'toggle']);
+        Route::post('users/{id}/impersonate', [UserController::class, 'impersonate']);
+
+        // Logs (super admin)
+        Route::get('logs',                    [LogController::class, 'index']);
+        Route::get('logs/export',             [LogController::class, 'export']);
+        Route::post('logs/clean',             [LogController::class, 'clean']);
+        Route::get('logs/{id}',               [LogController::class, 'show']);
+        Route::get('users/{id}/activity',     [LogController::class, 'userActivity']);
     });
 
     // === SUPER ADMIN + ADMIN MINISTÈRE ===
@@ -100,6 +140,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('media/bulk-delete',  [MediaController::class, 'bulkDelete']);
         Route::apiResource('media', MediaController::class)->except(['store']);
 
+        // Horaires de cultes
+
+        // Ajouter une route spécifique pour toggle active si nécessaire
+        Route::patch('worship-schedules/{id}/toggle-active', [WorshipScheduleController::class, 'toggleActive']);
+        Route::apiResource('worship-schedules', WorshipScheduleController::class);
+
         // Messages de contact
         Route::get('contact-messages',               [MessageContactController::class, 'index']);
         Route::get('contact-messages/{id}',          [MessageContactController::class, 'show']);
@@ -107,40 +153,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('contact-messages/{id}/unread', [MessageContactController::class, 'markUnread']);
         Route::post('contact-messages/{id}/reply',   [MessageContactController::class, 'reply']);
         Route::delete('contact-messages/{id}',       [MessageContactController::class, 'destroy']);
-    });
-
-    // ===== PROFIL (tous les utilisateurs connectés) =====
-    Route::prefix('profile')->group(function () {
-        Route::get('/',               [ProfileController::class, 'show']);
-        Route::put('/',               [ProfileController::class, 'update']);
-        Route::post('change-password', [ProfileController::class, 'changePassword']);
-        Route::get('activity',        [ProfileController::class, 'activity']);
-    });
-
-    // ===== SUPER ADMIN =====
-    Route::middleware('role:super_admin')->prefix('admin')->group(function () {
-        // ... routes existantes ...
-
-        // Utilisateurs (super admin)
-        Route::get('users',                  [UserController::class, 'index']);
-        Route::post('users',                 [UserController::class, 'store']);
-        Route::get('users/{id}',             [UserController::class, 'show']);
-        Route::put('users/{id}',             [UserController::class, 'update']);
-        Route::delete('users/{id}',          [UserController::class, 'destroy']);
-        Route::patch('users/{id}/toggle',    [UserController::class, 'toggle']);
-        Route::post('users/{id}/impersonate', [UserController::class, 'impersonate']);
-
-        // Logs (super admin)
-        Route::get('logs',                    [LogController::class, 'index']);
-        Route::get('logs/export',             [LogController::class, 'export']);
-        Route::post('logs/clean',             [LogController::class, 'clean']);
-        Route::get('logs/{id}',               [LogController::class, 'show']);
-        Route::get('users/{id}/activity',     [LogController::class, 'userActivity']);
-    });
-
-    // ===== SUPER ADMIN + ADMIN MINISTÈRE =====
-    Route::middleware('role:super_admin,admin_ministere')->prefix('ministry')->group(function () {
-        // ... routes existantes ...
+        Route::get('message-reponses', [MessageContactController::class, 'allReplies']);
 
         // Utilisateurs (admin ministère)
         Route::get('users',         [UserController::class, 'ministryIndex']);
@@ -160,7 +173,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('settings/seo',      [SettingController::class, 'updateSeo']);
         Route::get('settings/social',   [SettingController::class, 'getSocial']);
         Route::put('settings/social',   [SettingController::class, 'updateSocial']);
+        Route::get('settings/content',  [SettingController::class, 'getContent']); // GET
+        Route::put('settings/content',  [SettingController::class, 'updateContent']); // PUT (méthode HTTP correcte)
 
+        // Dashboard
         Route::get('dashboard',         [DashboardController::class, 'ministry']);
         Route::get('stats/content',     [DashboardController::class, 'statsContent']);
         Route::get('stats/engagement',  [DashboardController::class, 'statsEngagement']);
@@ -180,5 +196,26 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('tags/attach',   [TagController::class, 'attach']);
         Route::post('tags/detach',   [TagController::class, 'detach']);
         Route::apiResource('tags', TagController::class)->except(['show']);
+
+
+        // ===== MODÉRATION DES COMMENTAIRES =====
+        Route::prefix('comments')->group(function () {
+            Route::get('/', [ArticleCommentaireController::class, 'index']);           // Liste tous les commentaires
+            Route::get('pending', [ArticleCommentaireController::class, 'pending']);   // Commentaires en attente
+            Route::patch('{id}/approve', [ArticleCommentaireController::class, 'approve']);   // Approuver
+            Route::patch('{id}/reject', [ArticleCommentaireController::class, 'reject']);     // Rejeter
+            Route::delete('{id}', [ArticleCommentaireController::class, 'destroy']);  // Supprimer
+            Route::post('bulk-approve', [ArticleCommentaireController::class, 'bulkApprove']); // Approuver plusieurs
+            Route::post('bulk-reject', [ArticleCommentaireController::class, 'bulkReject']);   // Rejeter plusieurs
+            Route::post('bulk-delete', [ArticleCommentaireController::class, 'bulkDelete']);   // Supprimer plusieurs
+        });
+    });
+
+    // ===== PROFIL (tous les utilisateurs connectés) =====
+    Route::prefix('profile')->group(function () {
+        Route::get('/',               [ProfileController::class, 'show']);
+        Route::put('/',               [ProfileController::class, 'update']);
+        Route::post('change-password', [ProfileController::class, 'changePassword']);
+        Route::get('activity',        [ProfileController::class, 'activity']);
     });
 });

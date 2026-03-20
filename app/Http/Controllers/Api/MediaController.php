@@ -30,10 +30,11 @@ class MediaController extends Controller
     public function upload(Request $request)
     {
         $request->validate([
-            'fichier'   => 'required|file|max:10240', // 10MB max
+            'fichier'   => 'required|file|max:20480', // 20MB max (augmenté)
             'categorie' => 'nullable|string|max:100',
             'alt_text'  => 'nullable|string|max:255',
         ]);
+
 
         $ministereId = $this->getMinistereId($request);
         $fichier     = $request->file('fichier');

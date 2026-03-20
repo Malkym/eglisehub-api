@@ -1,0 +1,346 @@
+.
+├── [
+├── [*],
+├── [],
+├── 0,
+├── app
+│   ├── Helpers
+│   │   ├── NotifHelper.php
+│   │   └── UrlHelper.php
+│   ├── Http
+│   │   ├── Controllers
+│   │   ├── Middleware
+│   │   └── Resources
+│   ├── Models
+│   │   ├── ArticleCommentaire.php
+│   │   ├── Article.php
+│   │   ├── Categorie.php
+│   │   ├── EvenementException.php
+│   │   ├── EvenementParticipant.php
+│   │   ├── Evenement.php
+│   │   ├── Faq.php
+│   │   ├── LogAction.php
+│   │   ├── Media.php
+│   │   ├── MessageContact.php
+│   │   ├── MessageReponse.php
+│   │   ├── Ministere.php
+│   │   ├── Notification.php
+│   │   ├── PageContent.php
+│   │   ├── Page.php
+│   │   ├── PageSection.php
+│   │   ├── Permission.php
+│   │   ├── Role.php
+│   │   ├── SessionVisiteur.php
+│   │   ├── Setting.php
+│   │   ├── Slider.php
+│   │   ├── Tag.php
+│   │   ├── Template.php
+│   │   ├── TypeEvenement.php
+│   │   └── User.php
+│   ├── Providers
+│   │   └── AppServiceProvider.php
+│   └── Services
+├── arborescence.txt
+├── artisan
+├── bootstrap
+│   ├── app.php
+│   ├── cache
+│   │   ├── packages.php
+│   │   └── services.php
+│   └── providers.php
+├── composer.json
+├── composer.lock
+├── config
+│   ├── app.php
+│   ├── auth.php
+│   ├── cache.php
+│   ├── cors.php
+│   ├── database.php
+│   ├── filesystems.php
+│   ├── l5-swagger.php
+│   ├── logging.php
+│   ├── mail.php
+│   ├── permission.php
+│   ├── queue.php
+│   ├── sanctum.php
+│   ├── services.php
+│   └── session.php
+├── database
+│   ├── database.sqlite
+│   ├── factories
+│   │   └── UserFactory.php
+│   ├── migrations
+│   │   ├── 0001_01_01_000000_create_users_table.php
+│   │   ├── 0001_01_01_000001_create_cache_table.php
+│   │   ├── 0001_01_01_000002_create_jobs_table.php
+│   │   ├── 2026_03_16_150806_create_personal_access_tokens_table.php
+│   │   ├── 2026_03_16_151101_create_permission_tables.php
+│   │   ├── 2026_03_16_154128_create_ministeres_table.php
+│   │   ├── 2026_03_16_154143_modify_users_table.php
+│   │   ├── 2026_03_16_154153_create_pages_table.php
+│   │   ├── 2026_03_16_154345_create_articles_table.php
+│   │   ├── 2026_03_16_154400_create_evenements_table.php
+│   │   ├── 2026_03_16_154411_create_medias_table.php
+│   │   ├── 2026_03_16_154421_create_messages_contact_table.php
+│   │   ├── 2026_03_16_154432_create_settings_table.php
+│   │   ├── 2026_03_16_154444_create_logs_actions_table.php
+│   │   ├── 2026_03_16_191256_add_type_to_ministeres_table.php
+│   │   ├── 2026_03_16_191336_add_link_fields_to_articles_table.php
+│   │   ├── 2026_03_16_191412_add_recurrence_to_evenements_table.php
+│   │   ├── 2026_03_16_202348_create_faqs_table.php
+│   │   ├── 2026_03_16_202348_create_sliders_table.php
+│   │   ├── 2026_03_16_202348_create_tags_table.php
+│   │   ├── 2026_03_16_202349_create_taggables_table.php
+│   │   ├── 2026_03_16_211949_create_notifications_table.php
+│   │   ├── 2026_03_16_223116_create_roles_table.php
+│   │   ├── 2026_03_16_223117_0_create_page_sections_table.php
+│   │   ├── 2026_03_16_223117_1_create_page_contents_table.php
+│   │   ├── 2026_03_16_223117_create_categories_table.php
+│   │   ├── 2026_03_16_223117_create_permissions_table.php
+│   │   ├── 2026_03_16_223117_create_templates_table.php
+│   │   ├── 2026_03_16_223118_create_article_categories_table.php
+│   │   ├── 2026_03_16_223118_create_article_commentaires_table.php
+│   │   ├── 2026_03_16_223118_create_media_categories_table.php
+│   │   ├── 2026_03_16_223118_create_messages_reponses_table.php
+│   │   ├── 2026_03_16_223119_create_evenement_exceptions_table.php
+│   │   ├── 2026_03_16_223119_create_evenement_participants_table.php
+│   │   ├── 2026_03_16_223119_create_sessions_visiteurs_table.php
+│   │   └── 2026_03_16_223119_create_type_evenements_table.php
+│   └── seeders
+│       └── DatabaseSeeder.php
+├── deploy.sh
+├── package.json
+├── phpunit.xml
+├── public
+│   ├── favicon.ico
+│   ├── index.php
+│   ├── robots.txt
+│   └── storage -> /opt/lampp/htdocs/eglisehub-api/storage/app/public
+├── README.md
+├── resources
+│   ├── css
+│   │   └── app.css
+│   ├── js
+│   │   ├── app.js
+│   │   └── bootstrap.js
+│   └── views
+│       ├── vendor
+│       └── welcome.blade.php
+├── routes
+│   ├── api.php
+│   ├── console.php
+│   └── web.php
+├── storage
+│   ├── api-docs
+│   │   └── api-docs.json
+│   ├── app
+│   │   ├── private
+│   │   └── public
+│   ├── framework
+│   │   ├── cache
+│   │   ├── sessions
+│   │   ├── testing
+│   │   └── views
+│   └── logs
+│       └── laravel.log
+├── tests
+│   ├── Feature
+│   │   └── ExampleTest.php
+│   ├── TestCase.php
+│   └── Unit
+│       └── ExampleTest.php
+├── true,
+├── vendor
+│   ├── autoload.php
+│   ├── bin
+│   │   ├── carbon
+│   │   ├── openapi
+│   │   ├── patch-type-declarations
+│   │   ├── php-parse
+│   │   ├── phpunit
+│   │   ├── pint
+│   │   ├── psysh
+│   │   ├── sail
+│   │   ├── var-dump-server
+│   │   └── yaml-lint
+│   ├── brick
+│   │   └── math
+│   ├── carbonphp
+│   │   └── carbon-doctrine-types
+│   ├── composer
+│   │   ├── autoload_classmap.php
+│   │   ├── autoload_files.php
+│   │   ├── autoload_namespaces.php
+│   │   ├── autoload_psr4.php
+│   │   ├── autoload_real.php
+│   │   ├── autoload_static.php
+│   │   ├── ClassLoader.php
+│   │   ├── installed.json
+│   │   ├── installed.php
+│   │   ├── InstalledVersions.php
+│   │   ├── LICENSE
+│   │   ├── platform_check.php
+│   │   └── semver
+│   ├── darkaonline
+│   │   └── l5-swagger
+│   ├── dflydev
+│   │   └── dot-access-data
+│   ├── doctrine
+│   │   ├── annotations
+│   │   ├── inflector
+│   │   └── lexer
+│   ├── dragonmantank
+│   │   └── cron-expression
+│   ├── egulias
+│   │   └── email-validator
+│   ├── fakerphp
+│   │   └── faker
+│   ├── filp
+│   │   └── whoops
+│   ├── fruitcake
+│   │   └── php-cors
+│   ├── graham-campbell
+│   │   └── result-type
+│   ├── guzzlehttp
+│   │   ├── guzzle
+│   │   ├── promises
+│   │   ├── psr7
+│   │   └── uri-template
+│   ├── hamcrest
+│   │   └── hamcrest-php
+│   ├── laravel
+│   │   ├── framework
+│   │   ├── pail
+│   │   ├── pint
+│   │   ├── prompts
+│   │   ├── sail
+│   │   ├── sanctum
+│   │   ├── serializable-closure
+│   │   └── tinker
+│   ├── league
+│   │   ├── commonmark
+│   │   ├── config
+│   │   ├── flysystem
+│   │   ├── flysystem-local
+│   │   ├── mime-type-detection
+│   │   ├── uri
+│   │   └── uri-interfaces
+│   ├── maennchen
+│   │   └── zipstream-php
+│   ├── mockery
+│   │   └── mockery
+│   ├── monolog
+│   │   └── monolog
+│   ├── myclabs
+│   │   └── deep-copy
+│   ├── nesbot
+│   │   └── carbon
+│   ├── nette
+│   │   ├── schema
+│   │   └── utils
+│   ├── nikic
+│   │   └── php-parser
+│   ├── nunomaduro
+│   │   ├── collision
+│   │   └── termwind
+│   ├── phar-io
+│   │   ├── manifest
+│   │   └── version
+│   ├── phpoption
+│   │   └── phpoption
+│   ├── phpunit
+│   │   ├── php-code-coverage
+│   │   ├── php-file-iterator
+│   │   ├── php-invoker
+│   │   ├── php-text-template
+│   │   ├── php-timer
+│   │   └── phpunit
+│   ├── psr
+│   │   ├── cache
+│   │   ├── clock
+│   │   ├── container
+│   │   ├── event-dispatcher
+│   │   ├── http-client
+│   │   ├── http-factory
+│   │   ├── http-message
+│   │   ├── log
+│   │   └── simple-cache
+│   ├── psy
+│   │   └── psysh
+│   ├── ralouphie
+│   │   └── getallheaders
+│   ├── ramsey
+│   │   ├── collection
+│   │   └── uuid
+│   ├── sebastian
+│   │   ├── cli-parser
+│   │   ├── code-unit
+│   │   ├── code-unit-reverse-lookup
+│   │   ├── comparator
+│   │   ├── complexity
+│   │   ├── diff
+│   │   ├── environment
+│   │   ├── exporter
+│   │   ├── global-state
+│   │   ├── lines-of-code
+│   │   ├── object-enumerator
+│   │   ├── object-reflector
+│   │   ├── recursion-context
+│   │   ├── type
+│   │   └── version
+│   ├── spatie
+│   │   ├── image
+│   │   ├── image-optimizer
+│   │   ├── laravel-medialibrary
+│   │   ├── laravel-package-tools
+│   │   ├── laravel-permission
+│   │   └── temporary-directory
+│   ├── staabm
+│   │   └── side-effects-detector
+│   ├── swagger-api
+│   │   └── swagger-ui
+│   ├── symfony
+│   │   ├── clock
+│   │   ├── console
+│   │   ├── css-selector
+│   │   ├── deprecation-contracts
+│   │   ├── error-handler
+│   │   ├── event-dispatcher
+│   │   ├── event-dispatcher-contracts
+│   │   ├── finder
+│   │   ├── http-foundation
+│   │   ├── http-kernel
+│   │   ├── mailer
+│   │   ├── mime
+│   │   ├── polyfill-ctype
+│   │   ├── polyfill-intl-grapheme
+│   │   ├── polyfill-intl-idn
+│   │   ├── polyfill-intl-normalizer
+│   │   ├── polyfill-mbstring
+│   │   ├── polyfill-php80
+│   │   ├── polyfill-php83
+│   │   ├── polyfill-php84
+│   │   ├── polyfill-php85
+│   │   ├── polyfill-uuid
+│   │   ├── process
+│   │   ├── routing
+│   │   ├── service-contracts
+│   │   ├── string
+│   │   ├── translation
+│   │   ├── translation-contracts
+│   │   ├── uid
+│   │   ├── var-dumper
+│   │   └── yaml
+│   ├── theseer
+│   │   └── tokenizer
+│   ├── tijsverkoyen
+│   │   └── css-to-inline-styles
+│   ├── vlucas
+│   │   └── phpdotenv
+│   ├── voku
+│   │   └── portable-ascii
+│   └── zircote
+│       └── swagger-php
+└── vite.config.js
+
+207 directories, 137 files

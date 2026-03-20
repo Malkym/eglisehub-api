@@ -87,6 +87,7 @@ class SettingController extends Controller
             'theme'   => $this->getThemeData($ministereId, $ministere),
             'seo'     => $this->getSeoData($ministereId, $ministere),
             'social'  => $this->getSocialData($ministereId, $ministere),
+            'content' => $this->getContentData($ministereId, $ministere), // AJOUTÉ
         ];
 
         return response()->json(['success' => true, 'data' => $settings]);
@@ -117,6 +118,41 @@ class SettingController extends Controller
             'ville',
             'pays',
         ]));
+
+        $settingsToSave = [
+            'slogan',
+            'vision',
+            'mission',
+            'valeur',
+            'annee_fondation',
+            'qui_sommes_nous',
+            'live_youtube_id',
+            'live_actif',
+            'live_prochain',
+            'orange_money_numero',
+            'don_actif',
+            'fondateur',
+            'fondateur_titre',
+            'facebook',
+            'youtube',
+            'whatsapp',
+            'instagram',
+        ];
+
+        foreach ($settingsToSave as $cle) {
+            if ($request->has($cle)) {
+                // Gérer les booléens
+                $value = $request->$cle;
+                if ($cle === 'live_actif' || $cle === 'don_actif') {
+                    $value = $request->boolean($cle) ? '1' : '0';
+                }
+
+                Setting::updateOrCreate(
+                    ['ministere_id' => $ministereId, 'cle' => $cle],
+                    ['valeur' => $value]
+                );
+            }
+        }
 
         $this->log($request, 'update_settings', 'Mise à jour paramètres généraux');
 
@@ -225,6 +261,129 @@ class SettingController extends Controller
             'success' => true,
             'message' => 'Thème mis à jour.',
             'data'    => $this->getThemeData($ministereId, $ministere->fresh()),
+        ]);
+    }
+
+    // =========================================================
+    // CONTENU (TEXTES)
+    // =========================================================
+
+    private function getContentData(int $ministereId, Ministere $ministere): array
+    {
+        return [
+            'slogan'             => $this->get($ministereId, 'slogan', ''),
+            'vision'             => $this->get($ministereId, 'vision', ''),
+            'mission'            => $this->get($ministereId, 'mission', ''),
+            'valeur'            => $this->get($ministereId, 'valeur', ''),
+            'annee_fondation'    => $this->get($ministereId, 'annee_fondation', ''),
+            'qui_sommes_nous'    => $this->get($ministereId, 'qui_sommes_nous', $ministere->description),
+            'live_youtube_id'    => $this->get($ministereId, 'live_youtube_id', ''),
+            'live_actif'         => $this->get($ministereId, 'live_actif', false),
+            'live_prochain'      => $this->get($ministereId, 'live_prochain', ''),
+            'orange_money_numero' => $this->get($ministereId, 'orange_money_numero', ''),
+            'don_actif'          => $this->get($ministereId, 'don_actif', false),
+            'fondateur'          => $this->get($ministereId, 'fondateur', ''),
+            'fondateur_titre'    => $this->get($ministereId, 'fondateur_titre', ''),
+            'fondateur_photo'    => $this->get($ministereId, 'fondateur_photo'),
+        ];
+    }
+
+    /**
+     * @OA\Put(
+     *     path="/ministry/settings/content",
+     *     tags={"Paramètres"},
+     *     summary="Mettre à jour le contenu textuel du site",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         @OA\MediaType(mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(property="slogan", type="string"),
+     *                 @OA\Property(property="vision", type="string"),
+     *                 @OA\Property(property="mission", type="string"),
+     *                 @OA\Property(property="valeur", type="string"),
+     *                 @OA\Property(property="annee_fondation", type="year"),
+     *                 @OA\Property(property="qui_sommes_nous", type="string"),
+     *                 @OA\Property(property="live_youtube_id", type="string"),
+     *                 @OA\Property(property="live_actif", type="boolean"),
+     *                 @OA\Property(property="live_prochain", type="string"),
+     *                 @OA\Property(property="orange_money_numero", type="string"),
+     *                 @OA\Property(property="don_actif", type="boolean"),
+     *                 @OA\Property(property="fondateur", type="string"),
+     *                 @OA\Property(property="fondateur_titre", type="string"),
+     *                 @OA\Property(property="fondateur_photo", type="string", format="binary"),
+     *                 @OA\Property(property="ministere_id", type="integer", example=1)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Contenu mis à jour",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Contenu enregistré."),
+     *             @OA\Property(property="data", type="object")
+     *         )
+     *     )
+     * )
+     */
+
+
+    // PUT /api/ministry/settings/content
+    public function updateContent(Request $request)
+    {
+        $ministereId = $this->getMinistereId($request);
+
+        $fields = [
+            'slogan',
+            'vision',
+            'mission',
+            'valeur',
+            'annee_fondation',
+            'qui_sommes_nous',
+            'live_youtube_id',
+            'live_actif',
+            'live_prochain',
+            'orange_money_numero',
+            'don_actif',
+            'fondateur',
+            'fondateur_titre',
+            'fondateur_photo',
+        ];
+
+        foreach ($fields as $field) {
+            if ($request->has($field)) {
+                // Gérer les booléens
+                if ($field === 'live_actif' || $field === 'don_actif') {
+                    $value = $request->boolean($field) ? '1' : '0';
+                } else {
+                    $value = $request->$field;
+                }
+
+                Setting::updateOrCreate(
+                    ['ministere_id' => $ministereId, 'cle' => $field],
+                    ['valeur' => $value]
+                );
+            }
+        }
+
+        // Gérer l'upload de la photo du fondateur
+        if ($request->hasFile('fondateur_photo')) {
+            $file = $request->file('fondateur_photo');
+            $nomFichier = 'fondateur.' . $file->extension();
+            $chemin = $file->storeAs("ministeres/{$ministereId}", $nomFichier, 'public');
+
+            Setting::updateOrCreate(
+                ['ministere_id' => $ministereId, 'cle' => 'fondateur_photo'],
+                ['valeur' => $chemin]
+            );
+        }
+
+        $this->log($request, 'update_content', 'Mise à jour du contenu');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Contenu enregistré.',
+            'data'    => $this->getContentData($ministereId, Ministere::find($ministereId))
         ]);
     }
 
@@ -372,6 +531,113 @@ class SettingController extends Controller
             'success' => true,
             'message' => 'Réseaux sociaux mis à jour.',
             'data'    => $this->getSocialData($ministereId, $ministere->fresh()),
+        ]);
+    }
+
+    // =========================================================
+    // ROUTES PUBLIQUES
+    // =========================================================
+
+    // GET /api/public/settings
+    public function publicSettings(Request $request)
+    {
+        $subdomain = $request->query('subdomain', 'crc');
+
+        $ministere = Ministere::where('sous_domaine', $subdomain)
+            ->where('statut', 'actif')
+            ->first();
+
+        if (!$ministere) {
+            return response()->json(['success' => false, 'message' => 'Introuvable'], 404);
+        }
+
+        $settings = Setting::where('ministere_id', $ministere->id)
+            ->get()
+            ->keyBy('cle')
+            ->map(function ($item) {
+                // Convertir les booléens
+                if ($item->cle === 'live_actif' || $item->cle === 'don_actif') {
+                    return $item->valeur === '1' ? true : false;
+                }
+                return $item->valeur;
+            });
+
+        // Retourner aussi les données du ministère
+        return response()->json([
+            'success' => true,
+            'data' => array_merge([
+                'nom' => $ministere->nom,
+                'couleur_primaire' => $ministere->couleur_primaire,
+                'couleur_secondaire' => $ministere->couleur_secondaire,
+                'logo' => $ministere->logo ? Storage::url($ministere->logo) : null,
+                'description' => $ministere->description,
+                'adresse' => $ministere->adresse,
+                'telephone' => $ministere->telephone,
+                'email_contact' => $ministere->email_contact,
+                'ville' => $ministere->ville,
+                'pays' => $ministere->pays,
+                'facebook_url' => $ministere->facebook_url,
+                'youtube_url' => $ministere->youtube_url,
+                'whatsapp' => $ministere->whatsapp,
+            ], $settings->toArray())
+        ]);
+    }
+
+    // Helper pour récupérer tous les settings (pour usage interne)
+    private function getSettings(int $ministereId)
+    {
+        $settings = Setting::where('ministere_id', $ministereId)
+            ->get()
+            ->keyBy('cle')
+            ->map(function ($item) {
+                if ($item->cle === 'live_actif' || $item->cle === 'don_actif') {
+                    return $item->valeur === '1' ? true : false;
+                }
+                return $item->valeur;
+            });
+
+        return $settings;
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/ministry/settings/content",
+     *     tags={"Paramètres"},
+     *     summary="Récupérer le contenu textuel du site",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="ministere_id", in="query", @OA\Schema(type="integer"), description="Super admin uniquement"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Contenu textuel",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="object",
+     *                 @OA\Property(property="slogan", type="string", example="Pillons l'enfer pour peupler le Royaume"),
+     *                 @OA\Property(property="vision", type="string", example="Révéler Christ au monde entier..."),
+     *                 @OA\Property(property="mission", type="string", example="Diffuser l'Évangile..."),
+     *                 @OA\Property(property="valeur", type="string", example="Aimer Dieu et le prochain..."),
+     *                 @OA\Property(property="qui_sommes_nous", type="string"),
+     *                 @OA\Property(property="live_youtube_id", type="string", nullable=true),
+     *                 @OA\Property(property="live_actif", type="boolean"),
+     *                 @OA\Property(property="live_prochain", type="string", nullable=true),
+     *                 @OA\Property(property="orange_money_numero", type="string", nullable=true),
+     *                 @OA\Property(property="don_actif", type="boolean"),
+     *                 @OA\Property(property="fondateur", type="string", nullable=true),
+     *                 @OA\Property(property="fondateur_titre", type="string", nullable=true),
+     *                 @OA\Property(property="fondateur_photo", type="string", nullable=true)
+     *             )
+     *         )
+     *     )
+     * )
+     */
+    public function getContent(Request $request)
+    {
+        $ministereId = $this->getMinistereId($request);
+        $ministere   = Ministere::findOrFail($ministereId);
+
+        return response()->json([
+            'success' => true,
+            'data' => $this->getContentData($ministereId, $ministere)
         ]);
     }
 }

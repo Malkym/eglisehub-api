@@ -24,6 +24,558 @@
         }
     ],
     "paths": {
+        "/public/articles/{slug}/comments": {
+            "get": {
+                "tags": [
+                    "Public - Commentaires"
+                ],
+                "summary": "Liste les commentaires d'un article",
+                "operationId": "9434a6d31c50ddb3f87b9cc4ad11a90c",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des commentaires",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ArticleCommentaire"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Public - Commentaires"
+                ],
+                "summary": "Ajouter un commentaire",
+                "operationId": "be24267f8375a589bed96ad1ffc1b2d1",
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "contenu": {
+                                        "type": "string",
+                                        "example": "Très bon article !"
+                                    },
+                                    "nom_auteur": {
+                                        "type": "string",
+                                        "example": "Jean",
+                                        "nullable": true
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "nullable": true
+                                    },
+                                    "parent_id": {
+                                        "description": "ID du commentaire parent pour une réponse",
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Commentaire créé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Commentaire envoyé. En attente de modération."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ArticleCommentaire"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ministry/comments": {
+            "get": {
+                "tags": [
+                    "Admin - Commentaires"
+                ],
+                "summary": "Liste tous les commentaires (admin)",
+                "operationId": "0457a7268e607e63480ffde22b28c804",
+                "parameters": [
+                    {
+                        "name": "statut",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "en_attente",
+                                "approuve",
+                                "rejete"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "article_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des commentaires",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Paginated"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/comments/pending": {
+            "get": {
+                "tags": [
+                    "Admin - Commentaires"
+                ],
+                "summary": "Liste les commentaires en attente",
+                "operationId": "0e04c2915e79ba3e21fa6be72052f409",
+                "responses": {
+                    "200": {
+                        "description": "Commentaires en attente",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ArticleCommentaire"
+                                            }
+                                        },
+                                        "total": {
+                                            "type": "integer",
+                                            "example": 3
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/comments/{id}/approve": {
+            "patch": {
+                "tags": [
+                    "Admin - Commentaires"
+                ],
+                "summary": "Approuver un commentaire",
+                "operationId": "ed484d6faf624bb3d8a2a2f667611c4e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Commentaire approuvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Commentaire approuvé"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ArticleCommentaire"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Accès refusé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/comments/{id}/reject": {
+            "patch": {
+                "tags": [
+                    "Admin - Commentaires"
+                ],
+                "summary": "Rejeter un commentaire",
+                "operationId": "7688c0e5336a7dffb5229bc09d25b2fc",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Commentaire rejeté",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Commentaire rejeté"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ArticleCommentaire"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/comments/{id}": {
+            "delete": {
+                "tags": [
+                    "Admin - Commentaires"
+                ],
+                "summary": "Supprimer un commentaire",
+                "operationId": "4d29fca08560d54e723f9c68f1875b9c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Commentaire supprimé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Commentaire supprimé"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/comments/bulk-approve": {
+            "post": {
+                "tags": [
+                    "Admin - Commentaires"
+                ],
+                "summary": "Approuver plusieurs commentaires",
+                "operationId": "de3e543731b9b9ef0768daba47ad9c98",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            3
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Commentaires approuvés",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "3 commentaire(s) approuvé(s)"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/comments/bulk-reject": {
+            "post": {
+                "tags": [
+                    "Admin - Commentaires"
+                ],
+                "summary": "Rejeter plusieurs commentaires",
+                "operationId": "e4422dd102a1fe3be5ef3e0115161164",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            3
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Commentaires rejetés",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "3 commentaire(s) rejeté(s)"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/comments/bulk-delete": {
+            "post": {
+                "tags": [
+                    "Admin - Commentaires"
+                ],
+                "summary": "Supprimer plusieurs commentaires",
+                "operationId": "015ebc7a47a455da79a4eea2bf63eb61",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "ids": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            1,
+                                            2,
+                                            3
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Commentaires supprimés",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "3 commentaire(s) supprimé(s)"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/ministry/articles/{id}/publish": {
             "patch": {
                 "tags": [
@@ -263,6 +815,134 @@
                         "bearerAuth": []
                     }
                 ]
+            }
+        },
+        "/public/dons": {
+            "post": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Faire un don en ligne",
+                "description": "Enregistre une demande de don via Mobile Money (Orange, Moov, Airtel)",
+                "operationId": "18cbf48b9523b9bb2c5aff7d68220e07",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "subdomain",
+                                    "nom",
+                                    "telephone",
+                                    "montant",
+                                    "type_don",
+                                    "operateur"
+                                ],
+                                "properties": {
+                                    "subdomain": {
+                                        "description": "Sous-domaine du ministère",
+                                        "type": "string",
+                                        "example": "crc"
+                                    },
+                                    "nom": {
+                                        "description": "Nom complet du donateur",
+                                        "type": "string",
+                                        "example": "Jean Dupont"
+                                    },
+                                    "telephone": {
+                                        "description": "Numéro Mobile Money",
+                                        "type": "string",
+                                        "example": "+236 74 02 67 55"
+                                    },
+                                    "montant": {
+                                        "description": "Montant du don (minimum 100 FCFA)",
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 5000
+                                    },
+                                    "type_don": {
+                                        "type": "string",
+                                        "enum": [
+                                            "don",
+                                            "dime",
+                                            "offrande"
+                                        ],
+                                        "example": "don"
+                                    },
+                                    "operateur": {
+                                        "description": "Opérateur Mobile Money",
+                                        "type": "string",
+                                        "enum": [
+                                            "orange",
+                                            "moov",
+                                            "airtel"
+                                        ],
+                                        "example": "orange"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Demande de don enregistrée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Demande de don enregistrée. Vous allez recevoir un appel de confirmation."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Le montant doit être d'au moins 100."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Ministère non trouvé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Ministère introuvable."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         },
         "/admin/ministeres": {
@@ -709,6 +1389,402 @@
                         "description": "Ministère non trouvé ou inactif"
                     }
                 }
+            }
+        },
+        "/profile": {
+            "get": {
+                "tags": [
+                    "Profil"
+                ],
+                "summary": "Récupérer le profil de l'utilisateur connecté",
+                "operationId": "c6a79007a56511faa6f48397a2d15867",
+                "responses": {
+                    "200": {
+                        "description": "Profil retourné",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Profil"
+                ],
+                "summary": "Mettre à jour le profil",
+                "operationId": "74599296b1816be41ad4228975229966",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Mologbama"
+                                    },
+                                    "prenom": {
+                                        "type": "string",
+                                        "example": "Abishadai"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "mologbama@eglisehub.org"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profil mis à jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Profil mis à jour."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Email déjà utilisé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/profile/change-password": {
+            "post": {
+                "tags": [
+                    "Profil"
+                ],
+                "summary": "Changer le mot de passe",
+                "operationId": "eab89d886bd7227f9ff9afe4106917d5",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "ancien_mot_de_passe",
+                                    "nouveau_mot_de_passe",
+                                    "nouveau_mot_de_passe_confirmation"
+                                ],
+                                "properties": {
+                                    "ancien_mot_de_passe": {
+                                        "type": "string",
+                                        "example": "password123"
+                                    },
+                                    "nouveau_mot_de_passe": {
+                                        "type": "string",
+                                        "example": "newpassword456"
+                                    },
+                                    "nouveau_mot_de_passe_confirmation": {
+                                        "type": "string",
+                                        "example": "newpassword456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mot de passe changé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Mot de passe mis à jour. Les autres sessions ont été déconnectées."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Ancien mot de passe incorrect"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/profile/activity": {
+            "get": {
+                "tags": [
+                    "Profil"
+                ],
+                "summary": "Historique des activités de l'utilisateur",
+                "operationId": "05f8017de13bf83f105a691017455ede",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des activités",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Paginated"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/settings/content": {
+            "get": {
+                "tags": [
+                    "Paramètres"
+                ],
+                "summary": "Récupérer le contenu textuel du site",
+                "operationId": "c74d89633af57be25e356fef2bbef64e",
+                "parameters": [
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "description": "Super admin uniquement",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Contenu textuel",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "slogan": {
+                                                    "type": "string",
+                                                    "example": "Pillons l'enfer pour peupler le Royaume"
+                                                },
+                                                "vision": {
+                                                    "type": "string",
+                                                    "example": "Révéler Christ au monde entier..."
+                                                },
+                                                "mission": {
+                                                    "type": "string",
+                                                    "example": "Diffuser l'Évangile..."
+                                                },
+                                                "valeur": {
+                                                    "type": "string",
+                                                    "example": "Aimer Dieu et le prochain..."
+                                                },
+                                                "qui_sommes_nous": {
+                                                    "type": "string"
+                                                },
+                                                "live_youtube_id": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "live_actif": {
+                                                    "type": "boolean"
+                                                },
+                                                "live_prochain": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "orange_money_numero": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "don_actif": {
+                                                    "type": "boolean"
+                                                },
+                                                "fondateur": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "fondateur_titre": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                },
+                                                "fondateur_photo": {
+                                                    "type": "string",
+                                                    "nullable": true
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Paramètres"
+                ],
+                "summary": "Mettre à jour le contenu textuel du site",
+                "operationId": "8a3399d7785ed3b918fdda9ca3cb7dff",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "slogan": {
+                                        "type": "string"
+                                    },
+                                    "vision": {
+                                        "type": "string"
+                                    },
+                                    "mission": {
+                                        "type": "string"
+                                    },
+                                    "valeur": {
+                                        "type": "string"
+                                    },
+                                    "annee_fondation": {
+                                        "type": "year"
+                                    },
+                                    "qui_sommes_nous": {
+                                        "type": "string"
+                                    },
+                                    "live_youtube_id": {
+                                        "type": "string"
+                                    },
+                                    "live_actif": {
+                                        "type": "boolean"
+                                    },
+                                    "live_prochain": {
+                                        "type": "string"
+                                    },
+                                    "orange_money_numero": {
+                                        "type": "string"
+                                    },
+                                    "don_actif": {
+                                        "type": "boolean"
+                                    },
+                                    "fondateur": {
+                                        "type": "string"
+                                    },
+                                    "fondateur_titre": {
+                                        "type": "string"
+                                    },
+                                    "fondateur_photo": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "ministere_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contenu mis à jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Contenu enregistré."
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
             }
         },
         "/ministry/pages": {
@@ -2907,6 +3983,986 @@
                     }
                 ]
             }
+        },
+        "/ministry/tags": {
+            "get": {
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "Liste tous les tags du ministère",
+                "operationId": "97b6db8aa2a1f47c2220b2fb9e093356",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "ministere_id",
+                        "in": "query",
+                        "description": "Super admin uniquement",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des tags",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Tag"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "Créer un tag",
+                "operationId": "ddfc7e1475eecbd78f2343005ace8ffc",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nom"
+                                ],
+                                "properties": {
+                                    "nom": {
+                                        "type": "string",
+                                        "example": "Enseignements"
+                                    },
+                                    "couleur": {
+                                        "description": "Couleur en hexadécimal",
+                                        "type": "string",
+                                        "example": "#1E3A8A"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Tag créé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tag créé."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Tag"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Tag existe déjà"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/tags/{id}": {
+            "put": {
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "Modifier un tag",
+                "operationId": "7806e984d85c12b8c15db97df21b57fa",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "nom": {
+                                        "type": "string"
+                                    },
+                                    "couleur": {
+                                        "type": "string",
+                                        "example": "#1E3A8A"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tag mis à jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tag mis à jour."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/Tag"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "Supprimer un tag",
+                "operationId": "c9f482298d747111b65ce607047ce89e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tag supprimé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tag supprimé."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/tags/attach": {
+            "post": {
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "Attacher un tag à un article ou une page",
+                "operationId": "1fa39babea790f976b606249ca5b425e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "tag_id",
+                                    "type",
+                                    "contenu_id"
+                                ],
+                                "properties": {
+                                    "tag_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "article",
+                                            "page"
+                                        ]
+                                    },
+                                    "contenu_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tag attaché",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tag attaché à l'article."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/tags/detach": {
+            "post": {
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "Détacher un tag d'un article ou d'une page",
+                "operationId": "2abd51148506920741cca06520c4e731",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "tag_id",
+                                    "type",
+                                    "contenu_id"
+                                ],
+                                "properties": {
+                                    "tag_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "article",
+                                            "page"
+                                        ]
+                                    },
+                                    "contenu_id": {
+                                        "type": "integer",
+                                        "example": 5
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Tag détaché",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Tag détaché de l'article."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/tags/popular": {
+            "get": {
+                "tags": [
+                    "Tags"
+                ],
+                "summary": "Liste les tags les plus utilisés",
+                "operationId": "30f604dd9ce2d00887b4521461c00a70",
+                "responses": {
+                    "200": {
+                        "description": "Top 10 des tags",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Tag"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/public/tags": {
+            "get": {
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Liste les tags publics d'un ministère",
+                "operationId": "626793c263925b640c5bcc3984df0368",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tags publics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "nom": {
+                                                        "type": "string"
+                                                    },
+                                                    "slug": {
+                                                        "type": "string"
+                                                    },
+                                                    "couleur": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ministry/worship-schedules": {
+            "get": {
+                "tags": [
+                    "Worship Schedules"
+                ],
+                "summary": "Liste des horaires de cultes (Admin)",
+                "description": "Récupère tous les horaires de cultes du ministère authentifié",
+                "operationId": "getWorshipSchedules",
+                "parameters": [
+                    {
+                        "name": "active_only",
+                        "in": "query",
+                        "description": "Filtrer uniquement les horaires actifs",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "example": true
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des horaires",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/WorshipSchedule"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Worship Schedules"
+                ],
+                "summary": "Créer un horaire de culte",
+                "description": "Ajoute un nouvel horaire de culte pour le ministère",
+                "operationId": "storeWorshipSchedule",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "jour",
+                                    "heure_debut",
+                                    "heure_fin"
+                                ],
+                                "properties": {
+                                    "jour": {
+                                        "type": "string",
+                                        "enum": [
+                                            "monday",
+                                            "tuesday",
+                                            "wednesday",
+                                            "thursday",
+                                            "friday",
+                                            "saturday",
+                                            "sunday"
+                                        ],
+                                        "example": "sunday"
+                                    },
+                                    "heure_debut": {
+                                        "type": "string",
+                                        "format": "time",
+                                        "example": "09:00"
+                                    },
+                                    "heure_fin": {
+                                        "type": "string",
+                                        "format": "time",
+                                        "example": "12:00"
+                                    },
+                                    "is_highlight": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Culte de louange",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "ordre": {
+                                        "type": "integer",
+                                        "example": 0
+                                    },
+                                    "ministere_id": {
+                                        "description": "Uniquement pour super admin",
+                                        "type": "integer",
+                                        "example": 1
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Horaire créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Horaire ajouté avec succès."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/WorshipSchedule"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "errors": {
+                                            "properties": {
+                                                "jour": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "heure_debut": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "heure_fin": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/public/worship-schedules": {
+            "get": {
+                "tags": [
+                    "Worship Schedules"
+                ],
+                "summary": "Liste publique des horaires de cultes",
+                "description": "Récupère les horaires de cultes publics d'un ministère",
+                "operationId": "getPublicWorshipSchedules",
+                "parameters": [
+                    {
+                        "name": "subdomain",
+                        "in": "query",
+                        "description": "Sous-domaine du ministère",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    },
+                    {
+                        "name": "X-Subdomain",
+                        "in": "header",
+                        "description": "Sous-domaine du ministère (header)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "crc"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des horaires publics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/WorshipSchedule"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ministry/worship-schedules/{id}": {
+            "get": {
+                "tags": [
+                    "Worship Schedules"
+                ],
+                "summary": "Détails d'un horaire",
+                "description": "Récupère les détails d'un horaire spécifique",
+                "operationId": "getWorshipSchedule",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'horaire",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de l'horaire",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/WorshipSchedule"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Horaire non trouvé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Worship Schedules"
+                ],
+                "summary": "Modifier un horaire",
+                "description": "Met à jour les informations d'un horaire existant",
+                "operationId": "updateWorshipSchedule",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'horaire",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "jour": {
+                                        "type": "string",
+                                        "enum": [
+                                            "monday",
+                                            "tuesday",
+                                            "wednesday",
+                                            "thursday",
+                                            "friday",
+                                            "saturday",
+                                            "sunday"
+                                        ],
+                                        "example": "sunday"
+                                    },
+                                    "heure_debut": {
+                                        "type": "string",
+                                        "format": "time",
+                                        "example": "09:00"
+                                    },
+                                    "heure_fin": {
+                                        "type": "string",
+                                        "format": "time",
+                                        "example": "12:00"
+                                    },
+                                    "is_highlight": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "note": {
+                                        "type": "string",
+                                        "example": "Culte principal",
+                                        "nullable": true
+                                    },
+                                    "is_active": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "ordre": {
+                                        "type": "integer",
+                                        "example": 0
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Horaire mis à jour",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Horaire mis à jour."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/WorshipSchedule"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "404": {
+                        "description": "Horaire non trouvé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Worship Schedules"
+                ],
+                "summary": "Supprimer un horaire",
+                "description": "Supprime définitivement un horaire de culte",
+                "operationId": "deleteWorshipSchedule",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'horaire",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Horaire supprimé",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Horaire supprimé."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Horaire non trouvé"
+                    },
+                    "403": {
+                        "description": "Accès non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/ministry/worship-schedules/{id}/toggle-active": {
+            "patch": {
+                "tags": [
+                    "Worship Schedules"
+                ],
+                "summary": "Activer/Désactiver un horaire",
+                "description": "Bascule le statut actif/inactif d'un horaire",
+                "operationId": "toggleWorshipScheduleActive",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'horaire",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Statut modifié",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Statut modifié."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/WorshipSchedule"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Horaire non trouvé"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -3015,6 +5071,76 @@
                 },
                 "type": "object"
             },
+            "WorshipSchedule": {
+                "required": [
+                    "id",
+                    "ministere_id",
+                    "jour",
+                    "heure_debut",
+                    "heure_fin"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "ministere_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "jour": {
+                        "type": "string",
+                        "enum": [
+                            "monday",
+                            "tuesday",
+                            "wednesday",
+                            "thursday",
+                            "friday",
+                            "saturday",
+                            "sunday"
+                        ],
+                        "example": "sunday"
+                    },
+                    "heure_debut": {
+                        "type": "string",
+                        "format": "time",
+                        "example": "09:00"
+                    },
+                    "heure_fin": {
+                        "type": "string",
+                        "format": "time",
+                        "example": "12:00"
+                    },
+                    "is_highlight": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "note": {
+                        "type": "string",
+                        "example": "Culte de louange",
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "ordre": {
+                        "type": "integer",
+                        "example": 0
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "Article": {
                 "properties": {
                     "id": {
@@ -3062,6 +5188,15 @@
                     "en_avant": {
                         "type": "boolean",
                         "example": false
+                    },
+                    "average_rating": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 4.5
+                    },
+                    "rating_count": {
+                        "type": "integer",
+                        "example": 12
                     }
                 },
                 "type": "object"
@@ -3212,6 +5347,115 @@
                     }
                 },
                 "type": "object"
+            },
+            "ArticleCommentaire": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "article_id": {
+                        "type": "integer",
+                        "example": 8
+                    },
+                    "parent_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "nom_auteur": {
+                        "type": "string",
+                        "example": "Jean"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "jean@example.com"
+                    },
+                    "contenu": {
+                        "type": "string",
+                        "example": "Très bon article !"
+                    },
+                    "statut": {
+                        "type": "string",
+                        "enum": [
+                            "en_attente",
+                            "approuve",
+                            "rejete"
+                        ],
+                        "example": "en_attente"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "reponses": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ArticleCommentaire"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ArticleNote": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "article_id": {
+                        "type": "integer",
+                        "example": 8
+                    },
+                    "note": {
+                        "type": "integer",
+                        "maximum": 5,
+                        "minimum": 1,
+                        "example": 5
+                    },
+                    "ip": {
+                        "type": "string",
+                        "example": "127.0.0.1"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Tag": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "ministere_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nom": {
+                        "type": "string",
+                        "example": "Enseignements"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "enseignements"
+                    },
+                    "couleur": {
+                        "type": "string",
+                        "example": "#1E3A8A"
+                    },
+                    "articles_count": {
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "pages_count": {
+                        "type": "integer",
+                        "example": 2
+                    }
+                },
+                "type": "object"
             }
         },
         "securitySchemes": {
@@ -3268,6 +5512,10 @@
             "description": "Questions fréquentes"
         },
         {
+            "name": "Tags",
+            "description": "Tags"
+        },
+        {
             "name": "Logs",
             "description": "Logs activité"
         },
@@ -3278,6 +5526,22 @@
         {
             "name": "Public",
             "description": "Routes publiques sans auth"
+        },
+        {
+            "name": "Public - Commentaires",
+            "description": "Commentaires sur les articles"
+        },
+        {
+            "name": "Admin - Commentaires",
+            "description": "Modération des commentaires"
+        },
+        {
+            "name": "Worship Schedules",
+            "description": "Gestion des horaires de cultes"
+        },
+        {
+            "name": "Profil",
+            "description": "Profil"
         }
     ],
     "security": [

@@ -46,7 +46,7 @@ class FaqController extends Controller
             'actif'        => $request->actif ?? true,
         ]);
 
-        $this->log($request, 'create_faq', "Création FAQ: {$faq->question}");
+        $this->log($request, 'create_faq', 'faq', "Création FAQ: {$faq->question}");
 
         return response()->json([
             'success' => true,
@@ -77,7 +77,7 @@ class FaqController extends Controller
 
         $faq->update($request->only(['question', 'reponse', 'categorie', 'ordre', 'actif']));
 
-        $this->log($request, 'update_faq', "Modification FAQ: {$faq->question}");
+        $this->log($request, 'update_faq', 'faq', "Modification FAQ: {$faq->question}");
 
         return response()->json([
             'success' => true,
@@ -93,7 +93,7 @@ class FaqController extends Controller
         $question = $faq->question;
         $faq->delete();
 
-        $this->log($request, 'delete_faq', "Suppression FAQ: {$question}");
+        $this->log($request, 'delete_faq', 'faq', "Suppression FAQ: {$question}");
 
         return response()->json(['success' => true, 'message' => 'FAQ supprimée.']);
     }
@@ -163,16 +163,25 @@ class FaqController extends Controller
         return $faq;
     }
 
-    private function log(Request $request, string $action, string $details): void
-    {
-        LogAction::create([
-            'user_id'      => $request->user()->id,
-            'ministere_id' => $request->user()->ministere_id,
-            'action'       => $action,
-            'module'       => 'faq',
-            'details'      => $details,
-            'ip'           => $request->ip(),
-            'date_action'  => now(),
-        ]);
-    }
+private function log(Request $request, string $action, string $module, string $details, ?string $lien = null): void
+{
+    $log = LogAction::create([
+        'user_id'      => $request->user()->id,
+        'ministere_id' => $request->user()->ministere_id,
+        'action'       => $action,
+        'module'       => $module,
+        'details'      => $details,
+        'ip'           => $request->ip(),
+        'date_action'  => now(),
+    ]);
+
+    // Envoyer les notifications
+    $ministere = $request->user()->ministere;
+    LogAction::notifyForAction($action, [
+        'ministere_id' => $request->user()->ministere_id,
+        'ministere_nom' => $ministere?->nom,
+        'details' => $details,
+        'lien' => $lien,
+    ]);
+}
 }

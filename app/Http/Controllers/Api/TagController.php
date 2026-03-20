@@ -12,6 +12,27 @@ use Illuminate\Support\Str;
 
 class TagController extends Controller
 {
+
+    /**
+     * @OA\Get(
+     *     path="/ministry/tags",
+     *     tags={"Tags"},
+     *     summary="Liste tous les tags du ministère",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
+     *     @OA\Parameter(name="ministere_id", in="query", @OA\Schema(type="integer"), description="Super admin uniquement"),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des tags",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Tag"))
+     *         )
+     *     )
+     * )
+     */
+
+
     // GET /api/ministry/tags
     public function index(Request $request)
     {
@@ -25,6 +46,33 @@ class TagController extends Controller
 
         return response()->json(['success' => true, 'data' => $tags]);
     }
+
+    /**
+     * @OA\Post(
+     *     path="/ministry/tags",
+     *     tags={"Tags"},
+     *     summary="Créer un tag",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"nom"},
+     *             @OA\Property(property="nom", type="string", example="Enseignements"),
+     *             @OA\Property(property="couleur", type="string", example="#1E3A8A", description="Couleur en hexadécimal")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Tag créé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Tag créé."),
+     *             @OA\Property(property="data", ref="#/components/schemas/Tag")
+     *         )
+     *     ),
+     *     @OA\Response(response=422, description="Tag existe déjà")
+     * )
+     */
 
     // POST /api/ministry/tags
     public function store(Request $request)
@@ -60,6 +108,32 @@ class TagController extends Controller
         ], 201);
     }
 
+    /**
+     * @OA\Put(
+     *     path="/ministry/tags/{id}",
+     *     tags={"Tags"},
+     *     summary="Modifier un tag",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\RequestBody(
+     *         @OA\JsonContent(
+     *             @OA\Property(property="nom", type="string"),
+     *             @OA\Property(property="couleur", type="string", example="#1E3A8A")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tag mis à jour",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Tag mis à jour."),
+     *             @OA\Property(property="data", ref="#/components/schemas/Tag")
+     *         )
+     *     )
+     * )
+     */
+
+
     // PUT /api/ministry/tags/{id}
     public function update(Request $request, string $id)
     {
@@ -83,6 +157,24 @@ class TagController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/ministry/tags/{id}",
+     *     tags={"Tags"},
+     *     summary="Supprimer un tag",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tag supprimé",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Tag supprimé.")
+     *         )
+     *     )
+     * )
+     */
+
     // DELETE /api/ministry/tags/{id}
     public function destroy(Request $request, string $id)
     {
@@ -92,6 +184,31 @@ class TagController extends Controller
         return response()->json(['success' => true, 'message' => 'Tag supprimé.']);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/ministry/tags/attach",
+     *     tags={"Tags"},
+     *     summary="Attacher un tag à un article ou une page",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"tag_id","type","contenu_id"},
+     *             @OA\Property(property="tag_id", type="integer", example=1),
+     *             @OA\Property(property="type", type="string", enum={"article","page"}),
+     *             @OA\Property(property="contenu_id", type="integer", example=5)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tag attaché",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Tag attaché à l'article.")
+     *         )
+     *     )
+     * )
+     */
     // POST /api/ministry/tags/attach — Attacher un tag à un contenu
     public function attach(Request $request)
     {
@@ -118,6 +235,32 @@ class TagController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/ministry/tags/detach",
+     *     tags={"Tags"},
+     *     summary="Détacher un tag d'un article ou d'une page",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"tag_id","type","contenu_id"},
+     *             @OA\Property(property="tag_id", type="integer", example=1),
+     *             @OA\Property(property="type", type="string", enum={"article","page"}),
+     *             @OA\Property(property="contenu_id", type="integer", example=5)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tag détaché",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Tag détaché de l'article.")
+     *         )
+     *     )
+     * )
+     */
+
     // POST /api/ministry/tags/detach — Détacher un tag
     public function detach(Request $request)
     {
@@ -141,6 +284,24 @@ class TagController extends Controller
         ]);
     }
 
+
+    /**
+     * @OA\Get(
+     *     path="/ministry/tags/popular",
+     *     tags={"Tags"},
+     *     summary="Liste les tags les plus utilisés",
+     *     security={{"bearerAuth":{}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Top 10 des tags",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/Tag"))
+     *         )
+     *     )
+     * )
+     */
+
     // GET /api/ministry/tags/popular
     public function popular(Request $request)
     {
@@ -155,17 +316,41 @@ class TagController extends Controller
         return response()->json(['success' => true, 'data' => $tags]);
     }
 
+    /**
+     * @OA\Get(
+     *     path="/public/tags",
+     *     tags={"Public"},
+     *     summary="Liste les tags publics d'un ministère",
+     *     @OA\Parameter(name="subdomain", in="query", @OA\Schema(type="string", example="crc")),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Tags publics",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="data", type="array", @OA\Items(
+     *                 @OA\Property(property="id", type="integer"),
+     *                 @OA\Property(property="nom", type="string"),
+     *                 @OA\Property(property="slug", type="string"),
+     *                 @OA\Property(property="couleur", type="string")
+     *             ))
+     *         )
+     *     )
+     * )
+     */
+
     // GET /api/public/tags
     public function publicIndex(Request $request)
     {
         $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
 
-        $tags = Tag::whereHas('ministere', fn($q) =>
-                        $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
-                    )
-                    ->withCount(['articles', 'pages'])
-                    ->orderBy('nom')
-                    ->get(['id', 'nom', 'slug', 'couleur']);
+        $tags = Tag::whereHas(
+            'ministere',
+            fn($q) =>
+            $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+        )
+            ->withCount(['articles', 'pages'])
+            ->orderBy('nom')
+            ->get(['id', 'nom', 'slug', 'couleur']);
 
         return response()->json(['success' => true, 'data' => $tags]);
     }
