@@ -8,6 +8,7 @@ use App\Models\LogAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 
 class MediaController extends Controller
 {
@@ -29,15 +30,36 @@ class MediaController extends Controller
     // POST /api/ministry/media/upload
     public function upload(Request $request)
     {
-        $request->validate([
-            'fichier'   => 'required|file|max:20480', // 20MB max (augmenté)
+        $validator = Validator::make($request->all(), [
+            'fichier'   => 'required|file|max:51200', // 50MB max
             'categorie' => 'nullable|string|max:100',
             'alt_text'  => 'nullable|string|max:255',
+            'visible'   => 'boolean',
         ]);
 
+        if ($validator->fails()) {
+            $errors = $validator->errors();
+            if ($errors->has('fichier') && str_contains($errors->first('fichier'), 'max')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Le fichier dépasse la taille maximale autorisée de 50 Mo. Veuillez choisir un fichier plus petit.'
+                ], 422);
+            }
+            return response()->json(['success' => false, 'errors' => $errors], 422);
+        }
 
         $ministereId = $this->getMinistereId($request);
         $fichier     = $request->file('fichier');
+
+        // Vérification supplémentaire de la taille
+        $fileSize = $fichier->getSize();
+        $maxSize = 50 * 1024 * 1024; // 50MB
+        if ($fileSize > $maxSize) {
+            return response()->json([
+                'success' => false,
+                'message' => "Le fichier '{$fichier->getClientOriginalName()}' fait " . round($fileSize / 1024 / 1024, 2) . " Mo. La taille maximale autorisée est de 50 Mo."
+            ], 422);
+        }
 
         // Déterminer le type
         $mime = $fichier->getMimeType();
@@ -51,11 +73,21 @@ class MediaController extends Controller
         // Générer un nom de fichier unique
         $extension   = $fichier->getClientOriginalExtension();
         $nomFichier  = Str::uuid() . '.' . $extension;
-        $dossier     = "ministeres/{$ministereId}/{$type}s";
+
+        $dossier = "ministeres/{$ministereId}/{$type}s";
 
         // Stocker le fichier
         $chemin = $fichier->storeAs($dossier, $nomFichier, 'public');
-        $url    = Storage::url($chemin);
+
+        // Vérifier que le stockage a réussi
+        if (!$chemin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du stockage du fichier'
+            ], 500);
+        }
+
+        $url = Storage::url($chemin);
 
         $media = Media::create([
             'ministere_id' => $ministereId,
@@ -65,18 +97,35 @@ class MediaController extends Controller
             'url'          => $url,
             'type'         => $type,
             'mime_type'    => $mime,
-            'taille'       => $fichier->getSize(),
+            'taille'       => $fileSize,
             'categorie'    => $request->categorie,
             'alt_text'     => $request->alt_text,
+            'visible'      => $request->visible ?? true,
         ]);
 
         $this->log($request, 'upload_media', 'medias', "Upload: {$media->nom_original}");
 
         return response()->json([
             'success' => true,
-            'message' => 'Fichier uploadé.',
+            'message' => 'Fichier uploadé avec succès.',
             'data'    => $media,
         ], 201);
+    }
+
+    // PATCH /api/ministry/media/{id}/toggle-visibility
+    public function toggleVisibility(Request $request, string $id)
+    {
+        $media = $this->findForUser($request, $id);
+        $media->visible = !$media->visible;
+        $media->save();
+
+        $status = $media->visible ? 'visible' : 'masqué';
+
+        return response()->json([
+            'success' => true,
+            'message' => "Le média est maintenant {$status}.",
+            'data'    => $media,
+        ]);
     }
 
     // GET /api/ministry/media/{id}
@@ -94,9 +143,10 @@ class MediaController extends Controller
         $request->validate([
             'alt_text'  => 'nullable|string|max:255',
             'categorie' => 'nullable|string|max:100',
+            'visible'   => 'boolean',
         ]);
 
-        $media->update($request->only(['alt_text', 'categorie']));
+        $media->update($request->only(['alt_text', 'categorie', 'visible']));
 
         return response()->json([
             'success' => true,
@@ -150,16 +200,32 @@ class MediaController extends Controller
         ]);
     }
 
-    // GET /api/public/media
+    // GET /api/public/gallery - NOUVELLE ROUTE POUR LA GALERIE
+    public function publicGallery(Request $request)
+    {
+        $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
+
+        $medias = Media::whereHas(
+            'ministere',
+            fn($q) => $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+        )
+            ->visible() // UNIQUEMENT LES MÉDIAS VISIBLES
+            ->orderBy('created_at', 'desc')
+            ->paginate(24);
+
+        return response()->json(['success' => true, 'data' => $medias]);
+    }
+
+    // GET /api/public/media (ancienne route)
     public function publicIndex(Request $request)
     {
         $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
 
         $medias = Media::whereHas(
             'ministere',
-            fn($q) =>
-            $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+            fn($q) => $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
         )
+            ->visible()
             ->when($request->type,      fn($q) => $q->where('type', $request->type))
             ->when($request->categorie, fn($q) => $q->where('categorie', $request->categorie))
             ->orderBy('created_at', 'desc')
@@ -171,22 +237,21 @@ class MediaController extends Controller
     // Helpers
     private function getMinistereId(Request $request): ?int
     {
-        // Super admin peut cibler n'importe quel ministère
         if ($request->user()->isSuperAdmin()) {
             if ($request->has('ministere_id')) {
                 return (int) $request->ministere_id;
             }
-            // Super admin sans ministere_id spécifié = voir tout
             return null;
         }
 
         return $request->user()->ministere_id;
     }
+
     private function findForUser(Request $request, string $id): Media
     {
         $media = Media::findOrFail($id);
 
-        if (! $request->user()->isSuperAdmin()) {
+        if (!$request->user()->isSuperAdmin()) {
             if ($media->ministere_id !== $request->user()->ministere_id) {
                 abort(403, 'Accès refusé.');
             }

@@ -1,5 +1,6 @@
 <?php
 
+
 use App\Http\Controllers\Api\ArticleCommentaireController;
 use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
@@ -21,6 +22,14 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WorshipScheduleController;
 use Illuminate\Support\Facades\Route;
 
+
+Route::options('/{any}', function () {
+    return response()->json([], 200)
+        ->header('Access-Control-Allow-Origin', 'http://localhost:5173')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Subdomain')
+        ->header('Access-Control-Allow-Credentials', 'true');
+})->where('any', '.*');
 
 // ============================================================
 // ROUTES PUBLIQUES
@@ -59,7 +68,7 @@ Route::get('/public/worship-schedules', [WorshipScheduleController::class, 'publ
 // Settings publics
 Route::get('/public/settings', [SettingController::class, 'publicSettings']);
 
-Route::get('/public/gallery', [SliderController::class, 'publicGallery']);
+Route::get('/public/gallery', [MediaController::class, 'publicGallery']);
 
 // Dons
 Route::post('/public/dons', [DonController::class, 'store']);
@@ -139,6 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('media/upload',       [MediaController::class, 'upload']);
         Route::post('media/bulk-delete',  [MediaController::class, 'bulkDelete']);
         Route::apiResource('media', MediaController::class)->except(['store']);
+        Route::patch('media/{id}/toggle-visibility', [MediaController::class, 'toggleVisibility']);
 
         // Horaires de cultes
 

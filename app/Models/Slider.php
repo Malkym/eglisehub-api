@@ -14,10 +14,23 @@ class Slider extends Model
     use HasFactory;
 
     protected $fillable = [
-        'ministere_id', 'titre', 'sous_titre', 'image', 'url_image',
-        'bouton_texte', 'bouton_lien', 'position_texte',
-        'couleur_texte', 'couleur_fond', 'ordre', 'actif',
-        'type_media', 'video_path', 'video_thumbnail', 'video_size', 'video_mime_type',
+        'ministere_id',
+        'titre',
+        'sous_titre',
+        'image',
+        'url_image',
+        'bouton_texte',
+        'bouton_lien',
+        'position_texte',
+        'couleur_texte',
+        'couleur_fond',
+        'ordre',
+        'actif',
+        'type_media',
+        'video_path',
+        'video_thumbnail',
+        'video_size',
+        'video_mime_type',
     ];
 
     protected $casts = [
@@ -25,6 +38,7 @@ class Slider extends Model
         'ordre' => 'integer',
         'type_media' => 'string',
     ];
+
 
     protected function urlImage(): Attribute
     {

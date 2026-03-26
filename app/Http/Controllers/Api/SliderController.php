@@ -20,7 +20,20 @@ class SliderController extends Controller
         $sliders = Slider::where('ministere_id', $ministereId)
             ->when($request->actif !== null, fn($q) => $q->where('actif', $request->actif === 'true'))
             ->orderBy('ordre')
-            ->get();
+            ->get()
+            ->map(function ($slider) {
+                // Ajouter les URLs complètes au moment de la réponse
+                if ($slider->image) {
+                    $slider->url_image = Storage::url($slider->image);
+                }
+                if ($slider->video_path) {
+                    $slider->video_url = Storage::url($slider->video_path);
+                }
+                if ($slider->video_thumbnail) {
+                    $slider->video_thumbnail_url = Storage::url($slider->video_thumbnail);
+                }
+                return $slider;
+            });
 
         return response()->json(['success' => true, 'data' => $sliders]);
     }
@@ -72,8 +85,7 @@ class SliderController extends Controller
                 $nomFichier,
                 'public'
             );
-            $data['image'] = $chemin;
-            $data['url_image'] = Storage::url($chemin);
+            $data['image'] = $chemin;  // Stocke le chemin relatif
         }
 
         // Gestion de la vidéo
@@ -85,23 +97,38 @@ class SliderController extends Controller
                 $nomFichier,
                 'public'
             );
-
-            $data['video_path'] = $chemin;
+            
+            $data['video_path'] = $chemin;  // Stocke le chemin relatif
             $data['video_size'] = $file->getSize();
             $data['video_mime_type'] = $file->getMimeType();
-
+            
             // Générer une miniature à partir de la première frame de la vidéo
-            $data['video_thumbnail'] = $this->generateVideoThumbnail($chemin, $ministereId);
+            $thumbnail = $this->generateVideoThumbnail($chemin, $ministereId);
+            if ($thumbnail) {
+                $data['video_thumbnail'] = $thumbnail;  // Stocke le chemin relatif
+            }
         }
 
         $slider = Slider::create($data);
+
+        // Ajouter les URLs complètes pour la réponse
+        $responseData = $slider->toArray();
+        if ($slider->image) {
+            $responseData['url_image'] = Storage::url($slider->image);
+        }
+        if ($slider->video_path) {
+            $responseData['video_url'] = Storage::url($slider->video_path);
+        }
+        if ($slider->video_thumbnail) {
+            $responseData['video_thumbnail_url'] = Storage::url($slider->video_thumbnail);
+        }
 
         $this->log($request, 'create_slider', 'slider', "Création slide: {$slider->titre}");
 
         return response()->json([
             'success' => true,
             'message' => 'Slide créé.',
-            'data'    => $slider,
+            'data'    => $responseData,
         ], 201);
     }
 
@@ -146,7 +173,9 @@ class SliderController extends Controller
 
         // Gestion de l'image
         if ($typeMedia === 'image' && $request->hasFile('image')) {
+            // Supprimer l'ancienne image
             if ($slider->image) Storage::disk('public')->delete($slider->image);
+            
             $nomFichier = Str::uuid() . '.' . $request->file('image')->extension();
             $chemin = $request->file('image')->storeAs(
                 "ministeres/{$slider->ministere_id}/sliders",
@@ -154,20 +183,26 @@ class SliderController extends Controller
                 'public'
             );
             $data['image'] = $chemin;
-            $data['url_image'] = Storage::url($chemin);
 
-            // Supprimer l'ancienne vidéo si on passe d'image à image
+            // Supprimer l'ancienne vidéo si on passe de vidéo à image
             if ($slider->video_path) {
                 Storage::disk('public')->delete($slider->video_path);
+                if ($slider->video_thumbnail) {
+                    Storage::disk('public')->delete($slider->video_thumbnail);
+                }
                 $data['video_path'] = null;
                 $data['video_thumbnail'] = null;
                 $data['video_size'] = null;
                 $data['video_mime_type'] = null;
             }
+        } else if ($typeMedia === 'image' && $request->type_media === 'image' && !$request->hasFile('image')) {
+            // Si on reste en image mais qu'on ne change pas l'image, on garde l'existante
+            $data['image'] = $slider->image;
         }
 
         // Gestion de la vidéo
         if ($typeMedia === 'video' && $request->hasFile('video')) {
+            // Supprimer l'ancienne vidéo et ses thumbnails
             if ($slider->video_path) Storage::disk('public')->delete($slider->video_path);
             if ($slider->video_thumbnail) Storage::disk('public')->delete($slider->video_thumbnail);
             if ($slider->image) Storage::disk('public')->delete($slider->image);
@@ -184,20 +219,38 @@ class SliderController extends Controller
             $data['video_size'] = $file->getSize();
             $data['video_mime_type'] = $file->getMimeType();
             $data['image'] = null;
-            $data['url_image'] = null;
 
             // Générer une miniature
-            $data['video_thumbnail'] = $this->generateVideoThumbnail($chemin, $slider->ministere_id);
+            $thumbnail = $this->generateVideoThumbnail($chemin, $slider->ministere_id);
+            if ($thumbnail) {
+                $data['video_thumbnail'] = $thumbnail;
+            }
+        } else if ($typeMedia === 'video' && !$request->hasFile('video')) {
+            // Si on reste en vidéo mais qu'on ne change pas la vidéo, on garde l'existante
+            $data['video_path'] = $slider->video_path;
+            $data['video_thumbnail'] = $slider->video_thumbnail;
         }
 
         $slider->update($data);
+
+        // Ajouter les URLs complètes pour la réponse
+        $responseData = $slider->fresh()->toArray();
+        if ($slider->image) {
+            $responseData['url_image'] = Storage::url($slider->image);
+        }
+        if ($slider->video_path) {
+            $responseData['video_url'] = Storage::url($slider->video_path);
+        }
+        if ($slider->video_thumbnail) {
+            $responseData['video_thumbnail_url'] = Storage::url($slider->video_thumbnail);
+        }
 
         $this->log($request, 'update_slider', 'slider', "Modification slide: {$slider->titre}");
 
         return response()->json([
             'success' => true,
             'message' => 'Slide mis à jour.',
-            'data'    => $slider->fresh(),
+            'data'    => $responseData,
         ]);
     }
 
@@ -222,7 +275,19 @@ class SliderController extends Controller
     public function show(Request $request, string $id)
     {
         $slider = $this->findForUser($request, $id);
-        return response()->json(['success' => true, 'data' => $slider]);
+        
+        $responseData = $slider->toArray();
+        if ($slider->image) {
+            $responseData['url_image'] = Storage::url($slider->image);
+        }
+        if ($slider->video_path) {
+            $responseData['video_url'] = Storage::url($slider->video_path);
+        }
+        if ($slider->video_thumbnail) {
+            $responseData['video_thumbnail_url'] = Storage::url($slider->video_thumbnail);
+        }
+        
+        return response()->json(['success' => true, 'data' => $responseData]);
     }
 
     // PATCH /api/ministry/sliders/{id}/toggle
@@ -267,7 +332,20 @@ class SliderController extends Controller
         )
             ->where('actif', true)
             ->orderBy('ordre')
-            ->get();
+            ->get()
+            ->map(function ($slider) {
+                $data = $slider->toArray();
+                if ($slider->image) {
+                    $data['url_image'] = Storage::url($slider->image);
+                }
+                if ($slider->video_path) {
+                    $data['video_url'] = Storage::url($slider->video_path);
+                }
+                if ($slider->video_thumbnail) {
+                    $data['video_thumbnail_url'] = Storage::url($slider->video_thumbnail);
+                }
+                return $data;
+            });
 
         return response()->json(['success' => true, 'data' => $sliders]);
     }
@@ -295,7 +373,7 @@ class SliderController extends Controller
                     'titre' => $slider->titre,
                     'sous_titre' => $slider->sous_titre,
                     'type_media' => $slider->type_media ?? 'image',
-                    'url_image' => $slider->url_image,
+                    'url_image' => $slider->image ? Storage::url($slider->image) : null,
                     'video_path' => $slider->video_path ? Storage::url($slider->video_path) : null,
                     'video_thumbnail' => $slider->video_thumbnail ? Storage::url($slider->video_thumbnail) : null,
                     'source' => 'slider',
