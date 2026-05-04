@@ -62,6 +62,9 @@ return [
     |
     */
 
+    'hash' => true,
+    
+
     'token_prefix' => env('SANCTUM_TOKEN_PREFIX', ''),
 
     /*

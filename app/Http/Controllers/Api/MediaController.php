@@ -250,18 +250,6 @@ class MediaController extends Controller
         return in_array($extension, $allowed);
     }
 
-    private function getMinistereId(Request $request): ?int
-    {
-        if ($request->user()->isSuperAdmin()) {
-            if ($request->has('ministere_id')) {
-                return (int) $request->ministere_id;
-            }
-            return null;
-        }
-
-        return $request->user()->ministere_id;
-    }
-
     private function findForUser(Request $request, string $id): Media
     {
         $media = Media::findOrFail($id);
@@ -273,18 +261,5 @@ class MediaController extends Controller
         }
 
         return $media;
-    }
-
-    private function log(Request $request, string $action, string $module, string $details): void
-    {
-        LogAction::create([
-            'user_id'      => $request->user()->id,
-            'ministere_id' => $request->user()->ministere_id,
-            'action'    => $action,
-            'module'   => $module,
-            'details'  => $details,
-            'ip'       => $request->getClientIp(),
-            'date_action' => now(),
-        ]);
     }
 }

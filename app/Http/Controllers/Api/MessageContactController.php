@@ -188,19 +188,6 @@ class MessageContactController extends Controller
     }
 
     // Helpers
-    private function getMinistereId(Request $request): ?int
-    {
-        if ($request->user()->isSuperAdmin() && $request->has('ministere_id')) {
-            return (int) $request->ministere_id;
-        }
-
-        if ($request->user()->isSuperAdmin()) {
-            return null; // Super admin voit tout
-        }
-
-        return $request->user()->ministere_id;
-    }
-
     private function findForUser(Request $request, string $id): MessageContact
     {
         $message = MessageContact::findOrFail($id);
@@ -212,19 +199,6 @@ class MessageContactController extends Controller
         }
 
         return $message;
-    }
-
-    private function log(Request $request, string $action, string $module, string $details): void
-    {
-        LogAction::create([
-            'user_id'      => $request->user()->id,
-            'ministere_id' => $request->user()->ministere_id,
-            'action'       => $action,
-            'module'       => $module,
-            'details'      => $details,
-            'ip'           => $request->ip(),
-            'date_action'  => now(),
-        ]);
     }
 
     // POST /api/public/contact — Route publique

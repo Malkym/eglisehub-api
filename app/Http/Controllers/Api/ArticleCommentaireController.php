@@ -294,15 +294,4 @@ class ArticleCommentaireController extends Controller
             'message' => "{$count} commentaire(s) supprimé(s)"
         ]);
     }
-
-    private function getMinistereId(Request $request): ?int
-    {
-        if ($request->user()->isSuperAdmin()) {
-            if ($request->has('ministere_id')) {
-                return (int) $request->ministere_id;
-            }
-            return null;
-        }
-        return $request->user()->ministere_id;
-    }
 }

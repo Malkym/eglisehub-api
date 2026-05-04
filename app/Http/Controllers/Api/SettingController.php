@@ -15,14 +15,6 @@ class SettingController extends Controller
     // HELPERS PRIVÉS
     // =========================================================
 
-    private function getMinistereId(Request $request): int
-    {
-        if ($request->user()->isSuperAdmin() && $request->has('ministere_id')) {
-            return (int) $request->ministere_id;
-        }
-        return $request->user()->ministere_id;
-    }
-
     // Récupérer une valeur de setting
     private function get(int $ministereId, string $cle, mixed $defaut = null): mixed
     {
@@ -48,19 +40,6 @@ class SettingController extends Controller
             ['ministere_id' => $ministereId, 'cle' => $cle],
             ['valeur' => $valeurStr]
         );
-    }
-
-    private function log(Request $request, string $action, string $details): void
-    {
-        LogAction::create([
-            'user_id'      => $request->user()->id,
-            'ministere_id' => $request->user()->ministere_id,
-            'action'       => $action,
-            'module'       => 'settings',
-            'details'      => $details,
-            'ip'           => $request->ip(),
-            'date_action'  => now(),
-        ]);
     }
 
     // =========================================================

@@ -312,11 +312,4 @@ class DashboardController extends Controller
     // =========================================================
     // Helpers
     // =========================================================
-    private function getMinistereId(Request $request): int
-    {
-        if ($request->user()->isSuperAdmin() && $request->has('ministere_id')) {
-            return (int) $request->ministere_id;
-        }
-        return $request->user()->ministere_id ?? 1;
-    }
 }

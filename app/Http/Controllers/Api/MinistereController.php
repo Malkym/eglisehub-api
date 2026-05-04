@@ -401,26 +401,4 @@ class MinistereController extends Controller
             'data'    => $ministere,
         ]);
     }
-
-private function log(Request $request, string $action, string $module, string $details, ?string $lien = null): void
-{
-    $log = LogAction::create([
-        'user_id'      => $request->user()->id,
-        'ministere_id' => $request->user()->ministere_id,
-        'action'       => $action,
-        'module'       => $module,
-        'details'      => $details,
-        'ip'           => $request->ip(),
-        'date_action'  => now(),
-    ]);
-
-    // Envoyer les notifications
-    $ministere = $request->user()->ministere;
-    LogAction::notifyForAction($action, [
-        'ministere_id' => $request->user()->ministere_id,
-        'ministere_nom' => $ministere?->nom,
-        'details' => $details,
-        'lien' => $lien,
-    ]);
-}
 }

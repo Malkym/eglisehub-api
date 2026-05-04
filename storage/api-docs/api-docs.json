@@ -12,10 +12,6 @@
     "servers": [
         {
             "url": "http://127.0.0.1:8000/api",
-            "description": "Serveur local de développement"
-        },
-        {
-            "url": "http://127.0.0.1:8000/api",
             "description": "Local développement"
         },
         {
@@ -24,664 +20,48 @@
         }
     ],
     "paths": {
-        "/public/articles/{slug}/comments": {
-            "get": {
-                "tags": [
-                    "Public - Commentaires"
-                ],
-                "summary": "Liste les commentaires d'un article",
-                "operationId": "9434a6d31c50ddb3f87b9cc4ad11a90c",
-                "parameters": [
-                    {
-                        "name": "slug",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "subdomain",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "example": "crc"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Liste des commentaires",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/ArticleCommentaire"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "Public - Commentaires"
-                ],
-                "summary": "Ajouter un commentaire",
-                "operationId": "be24267f8375a589bed96ad1ffc1b2d1",
-                "parameters": [
-                    {
-                        "name": "slug",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "name": "subdomain",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "example": "crc"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "contenu": {
-                                        "type": "string",
-                                        "example": "Très bon article !"
-                                    },
-                                    "nom_auteur": {
-                                        "type": "string",
-                                        "example": "Jean",
-                                        "nullable": true
-                                    },
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "nullable": true
-                                    },
-                                    "parent_id": {
-                                        "description": "ID du commentaire parent pour une réponse",
-                                        "type": "integer",
-                                        "nullable": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Commentaire créé",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Commentaire envoyé. En attente de modération."
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/ArticleCommentaire"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/ministry/comments": {
-            "get": {
-                "tags": [
-                    "Admin - Commentaires"
-                ],
-                "summary": "Liste tous les commentaires (admin)",
-                "operationId": "0457a7268e607e63480ffde22b28c804",
-                "parameters": [
-                    {
-                        "name": "statut",
-                        "in": "query",
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "en_attente",
-                                "approuve",
-                                "rejete"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "article_id",
-                        "in": "query",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "search",
-                        "in": "query",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Liste des commentaires",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Paginated"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/comments/pending": {
-            "get": {
-                "tags": [
-                    "Admin - Commentaires"
-                ],
-                "summary": "Liste les commentaires en attente",
-                "operationId": "0e04c2915e79ba3e21fa6be72052f409",
-                "responses": {
-                    "200": {
-                        "description": "Commentaires en attente",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/ArticleCommentaire"
-                                            }
-                                        },
-                                        "total": {
-                                            "type": "integer",
-                                            "example": 3
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/comments/{id}/approve": {
-            "patch": {
-                "tags": [
-                    "Admin - Commentaires"
-                ],
-                "summary": "Approuver un commentaire",
-                "operationId": "ed484d6faf624bb3d8a2a2f667611c4e",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Commentaire approuvé",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Commentaire approuvé"
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/ArticleCommentaire"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Accès refusé"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/comments/{id}/reject": {
-            "patch": {
-                "tags": [
-                    "Admin - Commentaires"
-                ],
-                "summary": "Rejeter un commentaire",
-                "operationId": "7688c0e5336a7dffb5229bc09d25b2fc",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Commentaire rejeté",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Commentaire rejeté"
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/ArticleCommentaire"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/comments/{id}": {
-            "delete": {
-                "tags": [
-                    "Admin - Commentaires"
-                ],
-                "summary": "Supprimer un commentaire",
-                "operationId": "4d29fca08560d54e723f9c68f1875b9c",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Commentaire supprimé",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Commentaire supprimé"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/comments/bulk-approve": {
-            "post": {
-                "tags": [
-                    "Admin - Commentaires"
-                ],
-                "summary": "Approuver plusieurs commentaires",
-                "operationId": "de3e543731b9b9ef0768daba47ad9c98",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "ids": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "integer"
-                                        },
-                                        "example": [
-                                            1,
-                                            2,
-                                            3
-                                        ]
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Commentaires approuvés",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "3 commentaire(s) approuvé(s)"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/comments/bulk-reject": {
-            "post": {
-                "tags": [
-                    "Admin - Commentaires"
-                ],
-                "summary": "Rejeter plusieurs commentaires",
-                "operationId": "e4422dd102a1fe3be5ef3e0115161164",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "ids": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "integer"
-                                        },
-                                        "example": [
-                                            1,
-                                            2,
-                                            3
-                                        ]
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Commentaires rejetés",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "3 commentaire(s) rejeté(s)"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/comments/bulk-delete": {
-            "post": {
-                "tags": [
-                    "Admin - Commentaires"
-                ],
-                "summary": "Supprimer plusieurs commentaires",
-                "operationId": "015ebc7a47a455da79a4eea2bf63eb61",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "ids": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "integer"
-                                        },
-                                        "example": [
-                                            1,
-                                            2,
-                                            3
-                                        ]
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Commentaires supprimés",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "3 commentaire(s) supprimé(s)"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/ministry/articles/{id}/publish": {
-            "patch": {
-                "tags": [
-                    "Articles"
-                ],
-                "summary": "Publier ou dépublier un article (toggle)",
-                "operationId": "186cc38733db9bad7285bb4f0d5ac2b4",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Statut modifié",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Article publié."
-                                        },
-                                        "statut": {
-                                            "type": "string",
-                                            "enum": [
-                                                "publie",
-                                                "brouillon"
-                                            ]
-                                        },
-                                        "data": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
         "/login": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Connexion utilisateur",
-                "description": "Retourne un token Sanctum valide",
-                "operationId": "67d6d0fdd54fba132e1b6f55ca254183",
+                "description": "Authentifie un utilisateur et retourne un token Sanctum valide",
+                "operationId": "login",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "email",
-                                    "password"
-                                ],
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "example": "admin@eglisehub.org"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "example": "password123"
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/LoginRequest"
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "Succès",
+                        "description": "Connexion réussie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LoginResponse"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Identifiants incorrects",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
                                         "success": {
                                             "type": "boolean",
-                                            "example": true
+                                            "example": false
                                         },
-                                        "token": {
+                                        "message": {
                                             "type": "string",
-                                            "example": "1|abc123"
-                                        },
-                                        "user": {
-                                            "$ref": "#/components/schemas/User"
+                                            "example": "Identifiants incorrects."
                                         }
                                     },
                                     "type": "object"
@@ -690,25 +70,154 @@
                         }
                     },
                     "422": {
-                        "description": "Identifiants incorrects"
+                        "description": "Validation échouée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "L'email est requis."
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Trop de tentatives",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Trop de tentatives de connexion. Réessayez dans 5 minute(s)."
+                                        },
+                                        "retry_after": {
+                                            "type": "integer",
+                                            "example": 300
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
         },
-        "/logout": {
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Inscription nouveau ministère",
+                "description": "Crée un nouveau ministère et un compte administrateur associé",
+                "operationId": "register",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ministère créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Ministère créé avec succès."
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        },
+                                        "ministere": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation échouée",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "errors": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/logout": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Déconnexion",
-                "operationId": "28d48c13fca984400ac8de99f54ee13a",
+                "description": "Déconnecte l'utilisateur et révoque son token",
+                "operationId": "logout",
                 "responses": {
                     "200": {
-                        "description": "Déconnecté",
+                        "description": "Déconnexion réussie",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Success"
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Déconnexion réussie."
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
@@ -724,13 +233,14 @@
                 ]
             }
         },
-        "/me": {
+        "/api/me": {
             "get": {
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Profil de l'utilisateur connecté",
-                "operationId": "bc2032a379aa97707ccc61511897c120",
+                "summary": "Profil utilisateur actuel",
+                "description": "Retourne les informations de l'utilisateur connecté",
+                "operationId": "me",
                 "responses": {
                     "200": {
                         "description": "Profil retourné",
@@ -750,6 +260,9 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
                     }
                 },
                 "security": [
@@ -759,38 +272,20 @@
                 ]
             }
         },
-        "/change-password": {
+        "/api/change-password": {
             "post": {
                 "tags": [
                     "Auth"
                 ],
                 "summary": "Changer le mot de passe",
-                "operationId": "33cde1dae105c834f2e6b4791447f88e",
+                "description": "Permet à l'utilisateur de modifier son mot de passe",
+                "operationId": "changePassword",
                 "requestBody": {
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "ancien_mot_de_passe",
-                                    "nouveau_mot_de_passe",
-                                    "nouveau_mot_de_passe_confirmation"
-                                ],
-                                "properties": {
-                                    "ancien_mot_de_passe": {
-                                        "type": "string",
-                                        "example": "password123"
-                                    },
-                                    "nouveau_mot_de_passe": {
-                                        "type": "string",
-                                        "example": "newpassword456"
-                                    },
-                                    "nouveau_mot_de_passe_confirmation": {
-                                        "type": "string",
-                                        "example": "newpassword456"
-                                    }
-                                },
-                                "type": "object"
+                                "$ref": "#/components/schemas/ChangePasswordRequest"
                             }
                         }
                     }
@@ -801,13 +296,83 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Success"
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Mot de passe mis à jour. Autres sessions déconnectées."
+                                        }
+                                    },
+                                    "type": "object"
                                 }
                             }
                         }
                     },
                     "422": {
-                        "description": "Ancien mot de passe incorrect"
+                        "description": "Validation échouée ou ancien mot de passe incorrect",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Ancien mot de passe incorrect."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/refresh-token": {
+            "post": {
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Rafraîchir le token",
+                "description": "Génère un nouveau token pour l'utilisateur connecté",
+                "operationId": "refreshToken",
+                "responses": {
+                    "200": {
+                        "description": "Token rafraîchi",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Non authentifié"
                     }
                 },
                 "security": [
@@ -4967,6 +4532,184 @@
     },
     "components": {
         "schemas": {
+            "User": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Mologbama"
+                    },
+                    "prenom": {
+                        "type": "string",
+                        "example": "Abishadai",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "admin@eglisehub.org"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "super_admin",
+                            "admin_ministere",
+                            "createur_contenu",
+                            "moderateur"
+                        ],
+                        "example": "super_admin"
+                    },
+                    "ministere_id": {
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "actif": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "ministere": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "LoginRequest": {
+                "required": [
+                    "email",
+                    "password"
+                ],
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "admin@eglisehub.org"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "Password123"
+                    }
+                },
+                "type": "object"
+            },
+            "LoginResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "token": {
+                        "description": "Token d'authentification Sanctum",
+                        "type": "string",
+                        "example": "74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    }
+                },
+                "type": "object"
+            },
+            "RegisterRequest": {
+                "required": [
+                    "name",
+                    "email",
+                    "password",
+                    "ministere_nom",
+                    "ministere_type",
+                    "sous_domaine"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Admin"
+                    },
+                    "prenom": {
+                        "type": "string",
+                        "example": "Jean",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "admin@crc.org"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "Password123"
+                    },
+                    "password_confirmation": {
+                        "type": "string",
+                        "example": "Password123"
+                    },
+                    "ministere_nom": {
+                        "type": "string",
+                        "example": "CRC Bangui"
+                    },
+                    "ministere_type": {
+                        "type": "string",
+                        "enum": [
+                            "eglise",
+                            "ministere",
+                            "organisation",
+                            "para_ecclesial",
+                            "mission"
+                        ],
+                        "example": "eglise"
+                    },
+                    "sous_domaine": {
+                        "type": "string",
+                        "example": "crc"
+                    },
+                    "ville": {
+                        "type": "string",
+                        "example": "Bangui",
+                        "nullable": true
+                    },
+                    "pays": {
+                        "type": "string",
+                        "example": "République centrafricaine",
+                        "nullable": true
+                    },
+                    "email_contact": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "contact@crc.org",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ChangePasswordRequest": {
+                "required": [
+                    "ancien_mot_de_passe",
+                    "nouveau_mot_de_passe",
+                    "nouveau_mot_de_passe_confirmation"
+                ],
+                "properties": {
+                    "ancien_mot_de_passe": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "OldPassword123"
+                    },
+                    "nouveau_mot_de_passe": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "NewPassword123"
+                    },
+                    "nouveau_mot_de_passe_confirmation": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "NewPassword123"
+                    }
+                },
+                "type": "object"
+            },
             "Success": {
                 "properties": {
                     "success": {
@@ -5250,42 +4993,6 @@
                 },
                 "type": "object"
             },
-            "User": {
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "example": 1
-                    },
-                    "name": {
-                        "type": "string",
-                        "example": "Mologbama"
-                    },
-                    "prenom": {
-                        "type": "string",
-                        "example": "Abishadai"
-                    },
-                    "email": {
-                        "type": "string",
-                        "example": "admin@crc.org"
-                    },
-                    "role": {
-                        "type": "string",
-                        "enum": [
-                            "super_admin",
-                            "admin_ministere"
-                        ]
-                    },
-                    "ministere_id": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "actif": {
-                        "type": "boolean",
-                        "example": true
-                    }
-                },
-                "type": "object"
-            },
             "Page": {
                 "properties": {
                     "id": {
@@ -5472,8 +5179,16 @@
             "description": "Authentification"
         },
         {
+            "name": "Public",
+            "description": "Routes publiques sans auth"
+        },
+        {
             "name": "Ministères",
             "description": "Gestion des ministères (Super Admin)"
+        },
+        {
+            "name": "Utilisateurs",
+            "description": "Gestion des utilisateurs"
         },
         {
             "name": "Pages",
@@ -5496,16 +5211,12 @@
             "description": "Messages de contact"
         },
         {
-            "name": "Utilisateurs",
-            "description": "Gestion des utilisateurs"
+            "name": "Dashboard",
+            "description": "Statistiques"
         },
         {
             "name": "Paramètres",
             "description": "Thème, SEO, réseaux sociaux"
-        },
-        {
-            "name": "Dashboard",
-            "description": "Statistiques"
         },
         {
             "name": "FAQ",
@@ -5522,18 +5233,6 @@
         {
             "name": "Notifications",
             "description": "Notifications"
-        },
-        {
-            "name": "Public",
-            "description": "Routes publiques sans auth"
-        },
-        {
-            "name": "Public - Commentaires",
-            "description": "Commentaires sur les articles"
-        },
-        {
-            "name": "Admin - Commentaires",
-            "description": "Modération des commentaires"
         },
         {
             "name": "Worship Schedules",

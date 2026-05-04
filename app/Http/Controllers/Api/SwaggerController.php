@@ -117,15 +117,7 @@ namespace App\Http\Controllers\Api;
  *     @OA\Property(property="est_gratuit",  type="boolean", example=true)
  * )
  * 
- * @OA\Schema(schema="User",
- *     @OA\Property(property="id",           type="integer", example=1),
- *     @OA\Property(property="name",         type="string",  example="Mologbama"),
- *     @OA\Property(property="prenom",       type="string",  example="Abishadai"),
- *     @OA\Property(property="email",        type="string",  example="admin@crc.org"),
- *     @OA\Property(property="role",         type="string",  enum={"super_admin","admin_ministere"}),
- *     @OA\Property(property="ministere_id", type="integer", nullable=true),
- *     @OA\Property(property="actif",        type="boolean", example=true)
- * )
+
  * 
  * @OA\Schema(schema="Page",
  *     @OA\Property(property="id",          type="integer", example=1),
