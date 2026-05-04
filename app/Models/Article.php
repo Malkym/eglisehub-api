@@ -1,11 +1,9 @@
 <?php
-// app/Models/Article.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Article extends Model
 {
@@ -25,18 +23,23 @@ class Article extends Model
         'commentaires_actifs' => 'boolean',
     ];
 
-    protected function imageUne(): Attribute
+    protected $appends = ['average_rating', 'rating_count'];
+
+    public function getAverageRatingAttribute(): float
     {
-        return Attribute::make(
-            get: fn ($value) => self::buildStorageUrl($value),
-            set: fn ($value) => $value,
-        );
+        return round($this->notes()->avg('note') ?? 0, 1);
+    }
+
+    public function getRatingCountAttribute(): int
+    {
+        return $this->notes()->count();
     }
 
     public static function buildStorageUrl(?string $path): ?string
     {
         if (!$path) return null;
         if (str_starts_with($path, 'http')) return $path;
+        
         $base = rtrim(config('app.url'), '/');
         $path = ltrim($path, '/');
         if (!str_starts_with($path, 'storage/')) {
@@ -45,7 +48,11 @@ class Article extends Model
         return $base . '/' . $path;
     }
 
-    // ===== RELATIONS EXISTANTES =====
+    public function getImageUneUrlAttribute(): ?string
+    {
+        return self::buildStorageUrl($this->image_une);
+    }
+
     public function tags()
     {
         return $this->morphToMany(Tag::class, 'taggable');
@@ -63,11 +70,6 @@ class Article extends Model
         return $this->hasMany(ArticleCommentaire::class);
     }
 
-    public function categories()
-    {
-        return $this->belongsToMany(Categorie::class, 'article_categories', 'article_id', 'categorie_id');
-    }
-
     public function ministere()
     {
         return $this->belongsTo(Ministere::class);
@@ -78,122 +80,71 @@ class Article extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // ===== NOUVELLES RELATIONS POUR LES NOTES =====
-    
-    /**
-     * Relation avec les notes de l'article
-     */
     public function notes()
     {
         return $this->hasMany(ArticleNote::class);
     }
 
-    /**
-     * Calculer la note moyenne de l'article
-     */
-    public function getAverageRatingAttribute()
-    {
-        return $this->notes()->avg('note') ?? 0;
-    }
-
-    /**
-     * Compter le nombre total de votes
-     */
-    public function getRatingCountAttribute()
-    {
-        return $this->notes()->count();
-    }
-
-    /**
-     * Vérifier si un visiteur a déjà voté
-     */
     public function hasUserRated(?string $ip, ?string $sessionId): bool
     {
         if (!$ip && !$sessionId) return false;
-        
-        $query = $this->notes();
-        
-        if ($ip) {
-            $query->where('ip', $ip);
-        }
-        
-        if ($sessionId) {
-            $query->orWhere('session_id', $sessionId);
-        }
-        
-        return $query->exists();
+
+        return $this->notes()
+            ->where(function ($query) use ($ip, $sessionId) {
+                if ($ip) {
+                    $query->orWhere('ip', $ip);
+                }
+                if ($sessionId) {
+                    $query->orWhere('session_id', $sessionId);
+                }
+            })
+            ->exists();
     }
 
-    /**
-     * Ajouter une note à l'article
-     */
     public function addRating(int $note, ?string $ip, ?string $sessionId)
     {
         return $this->notes()->create([
-            'note' => $note,
-            'ip' => $ip,
+            'note'       => $note,
+            'ip'         => $ip,
             'session_id' => $sessionId,
         ]);
     }
 
-    // ===== SCOPES UTILES =====
-    
-    /**
-     * Scope pour les articles publiés
-     */
     public function scopePublies($query)
     {
         return $query->where('statut', 'publie')
-                     ->where('date_publication', '<=', now());
+            ->where('date_publication', '<=', now());
     }
 
-    /**
-     * Scope pour filtrer par catégorie
-     */
     public function scopeDeCategorie($query, string $categorie)
     {
         return $query->where('categorie', $categorie);
     }
 
-    /**
-     * Scope pour les articles mis en avant
-     */
     public function scopeEnAvant($query)
     {
         return $query->where('en_avant', true);
     }
 
-    /**
-     * Scope pour les témoignages (articles de catégorie témoignage)
-     */
     public function scopeTemoignages($query)
     {
         return $query->where('categorie', 'temoignage');
     }
 
-    /**
-     * Scope pour les enseignements
-     */
     public function scopeEnseignements($query)
     {
-        return $query->where('categorie', 'enseignement');
+        return $query->where('categorie', 'seignement');
     }
 
-    /**
-     * Scope pour trier par note moyenne
-     */
-    public function scopeTrieParNote($query, $direction = 'desc')
+    public function scopeTrieParNote($query, string $direction = 'desc')
     {
         return $query->withAvg('notes', 'note')
-                     ->orderBy('notes_avg_note', $direction);
+            ->orderBy('notes_avg_note', $direction);
     }
 
-    /**
-     * Scope pour trier par nombre de votes
-     */
-    public function scopeTrieParVotes($query, $direction = 'desc')
+    public function scopeTrieParVotes($query, string $direction = 'desc')
     {
         return $query->withCount('notes')
-                     ->orderBy('notes_count', $direction);
+            ->orderBy('notes_count', $direction);
     }
 }

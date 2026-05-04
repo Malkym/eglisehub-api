@@ -5,13 +5,16 @@ return [
     'documentations' => [
         'default' => [
             'api' => [
-                'title' => 'L5 Swagger UI',
+                'title' => 'EgliseHub API',
+                'description' => 'API REST pour la gestion des ministères religieux - Authentication, Gestion des utilisateurs, Articles, Événements, Médias, Messages, etc.',
+                'version' => '1.0.0',
+                'contact' => [
+                    'name' => 'Support EgliseHub',
+                    'email' => 'support@eglisehub.org',
+                ],
             ],
 
             'routes' => [
-                /*
-                 * Route for accessing api documentation interface
-                 */
                 'api' => 'api/documentation',
             ],
             'paths' => [

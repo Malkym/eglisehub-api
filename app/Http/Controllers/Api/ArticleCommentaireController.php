@@ -1,33 +1,20 @@
 <?php
-// app/Http/Controllers/Api/ArticleCommentaireController.php
 
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\ArticleCommentaire;
+use App\Models\LogAction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class ArticleCommentaireController extends Controller
 {
-    // ===== ROUTES PUBLIQUES (existantes) =====
+    private const RATE_LIMIT_MAX = 5;
+    private const RATE_LIMIT_DECAY = 3600;
 
-    /**
-     * @OA\Get(
-     *     path="/public/articles/{slug}/comments",
-     *     tags={"Public - Commentaires"},
-     *     summary="Liste les commentaires d'un article",
-     *     @OA\Parameter(name="slug", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="subdomain", in="query", @OA\Schema(type="string", example="crc")),
-     *     @OA\Response(response=200, description="Liste des commentaires",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/ArticleCommentaire"))
-     *         )
-     *     )
-     * )
-     */
-
+    // GET /api/public/articles/{slug}/comments
     public function publicIndex(Request $request, string $slug)
     {
         $subdomain = $request->query('subdomain', 'crc');
@@ -48,39 +35,23 @@ class ArticleCommentaireController extends Controller
         return response()->json(['success' => true, 'data' => $commentaires]);
     }
 
-    /**
-     * @OA\Post(
-     *     path="/public/articles/{slug}/comments",
-     *     tags={"Public - Commentaires"},
-     *     summary="Ajouter un commentaire",
-     *     @OA\Parameter(name="slug", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="subdomain", in="query", @OA\Schema(type="string", example="crc")),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="contenu", type="string", example="Très bon article !"),
-     *             @OA\Property(property="nom_auteur", type="string", nullable=true, example="Jean"),
-     *             @OA\Property(property="email", type="string", format="email", nullable=true),
-     *             @OA\Property(property="parent_id", type="integer", nullable=true, description="ID du commentaire parent pour une réponse")
-     *         )
-     *     ),
-     *     @OA\Response(response=201, description="Commentaire créé",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Commentaire envoyé. En attente de modération."),
-     *             @OA\Property(property="data", ref="#/components/schemas/ArticleCommentaire")
-     *         )
-     *     )
-     * )
-     */
-
+    // POST /api/public/articles/{slug}/comments
     public function publicStore(Request $request, string $slug)
     {
-        $request->validate([
+        $rateLimitKey = 'comment:' . $slug . ':' . ($request->ip() ?? 'unknown');
+        
+        if (RateLimiter::tooManyAttempts($rateLimitKey, self::RATE_LIMIT_MAX)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Trop de commentaires. Veuillez réessayer plus tard.',
+            ], 429);
+        }
+
+        $validated = $request->validate([
             'nom_auteur' => 'nullable|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'contenu' => 'required|string|min:2|max:1000',
-            'parent_id' => 'nullable|exists:article_commentaires,id',
+            'email'     => 'nullable|email|max:255',
+            'contenu'    => 'required|string|min:2|max:1000',
+            'parent_id' => 'nullable|integer|exists:article_commentaires,id',
         ]);
 
         $subdomain = $request->query('subdomain', 'crc');
@@ -90,16 +61,17 @@ class ArticleCommentaireController extends Controller
         })->where('slug', $slug)->where('statut', 'publie')->firstOrFail();
 
         $commentaire = ArticleCommentaire::create([
-            'article_id' => $article->id,
-            'parent_id' => $request->parent_id,
-            'nom_auteur' => $request->nom_auteur ?? 'Anonyme',
-            'email' => $request->email,
-            'contenu' => $request->contenu,
-            'statut' => 'en_attente',
-            'ip' => $request->ip(),
+            'article_id'  => $article->id,
+            'parent_id'  => $validated['parent_id'] ?? null,
+            'nom_auteur' => $validated['nom_auteur'] ?? 'Anonyme',
+            'email'     => $validated['email'] ?? null,
+            'contenu'   => $validated['contenu'],
+            'statut'    => 'en_attente',
+            'ip'       => $request->getClientIp(),
         ]);
 
-        // Notifier les admins
+        RateLimiter::hit($rateLimitKey, self::RATE_LIMIT_DECAY);
+
         \App\Helpers\NotifHelper::notifyMinistryAdmins(
             $article->ministere_id,
             'Nouveau commentaire en attente',
@@ -112,38 +84,11 @@ class ArticleCommentaireController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Commentaire envoyé. En attente de modération.',
-            'data' => $commentaire
+            'data'   => $commentaire
         ], 201);
     }
 
-    // ===== ROUTES ADMIN =====
-
-    private function getMinistereId(Request $request): ?int
-    {
-        if ($request->user()->isSuperAdmin()) {
-            if ($request->has('ministere_id')) {
-                return (int) $request->ministere_id;
-            }
-            return null;
-        }
-        return $request->user()->ministere_id;
-    }
-
-
-    /**
-     * @OA\Get(
-     *     path="/ministry/comments",
-     *     tags={"Admin - Commentaires"},
-     *     summary="Liste tous les commentaires (admin)",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="statut", in="query", @OA\Schema(type="string", enum={"en_attente","approuve","rejete"})),
-     *     @OA\Parameter(name="article_id", in="query", @OA\Schema(type="integer")),
-     *     @OA\Parameter(name="search", in="query", @OA\Schema(type="string")),
-     *     @OA\Response(response=200, description="Liste des commentaires",
-     *         @OA\JsonContent(ref="#/components/schemas/Paginated")
-     *     )
-     * )
-     */
+    // GET /api/ministry/comments
     public function index(Request $request)
     {
         $ministereId = $this->getMinistereId($request);
@@ -152,14 +97,12 @@ class ArticleCommentaireController extends Controller
             ->withCount('reponses')
             ->orderBy('created_at', 'desc');
 
-        // Filtrer par ministère
         if ($ministereId) {
             $query->whereHas('article', function ($q) use ($ministereId) {
                 $q->where('ministere_id', $ministereId);
             });
         }
 
-        // Filtres optionnels
         if ($request->has('statut')) {
             $query->where('statut', $request->statut);
         }
@@ -181,22 +124,7 @@ class ArticleCommentaireController extends Controller
         return response()->json(['success' => true, 'data' => $commentaires]);
     }
 
-
-    /**
-     * @OA\Get(
-     *     path="/ministry/comments/pending",
-     *     tags={"Admin - Commentaires"},
-     *     summary="Liste les commentaires en attente",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(response=200, description="Commentaires en attente",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="array", @OA\Items(ref="#/components/schemas/ArticleCommentaire")),
-     *             @OA\Property(property="total", type="integer", example=3)
-     *         )
-     *     )
-     * )
-     */
+    // GET /api/ministry/comments/pending
     public function pending(Request $request)
     {
         $ministereId = $this->getMinistereId($request);
@@ -212,40 +140,26 @@ class ArticleCommentaireController extends Controller
         }
 
         $commentaires = $query->paginate($request->per_page ?? 20);
+        $total = $query->count();
 
         return response()->json([
             'success' => true,
-            'data' => $commentaires,
-            'total' => $query->count()
+            'data'   => $commentaires,
+            'total'  => $total,
         ]);
     }
 
-    /**
-     * @OA\Patch(
-     *     path="/ministry/comments/{id}/approve",
-     *     tags={"Admin - Commentaires"},
-     *     summary="Approuver un commentaire",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="Commentaire approuvé",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Commentaire approuvé"),
-     *             @OA\Property(property="data", ref="#/components/schemas/ArticleCommentaire")
-     *         )
-     *     ),
-     *     @OA\Response(response=403, description="Accès refusé")
-     * )
-     */
-
-    public function approve(Request $request, $id)
+    // PATCH /api/ministry/comments/{id}/approve
+    public function approve(Request $request, int $id)
     {
         $commentaire = ArticleCommentaire::findOrFail($id);
 
-        // Vérifier les permissions
-        if (! $request->user()->isSuperAdmin()) {
+        if (!$request->user()->isSuperAdmin()) {
             if ($commentaire->article->ministere_id !== $request->user()->ministere_id) {
-                return response()->json(['success' => false, 'message' => 'Accès refusé'], 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé',
+                ], 403);
             }
         }
 
@@ -254,34 +168,21 @@ class ArticleCommentaireController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Commentaire approuvé',
-            'data' => $commentaire
+            'data'   => $commentaire
         ]);
     }
 
-    /**
-     * @OA\Patch(
-     *     path="/ministry/comments/{id}/reject",
-     *     tags={"Admin - Commentaires"},
-     *     summary="Rejeter un commentaire",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="Commentaire rejeté",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Commentaire rejeté"),
-     *             @OA\Property(property="data", ref="#/components/schemas/ArticleCommentaire")
-     *         )
-     *     )
-     * )
-     */
-    public function reject(Request $request, $id)
+    // PATCH /api/ministry/comments/{id}/reject
+    public function reject(Request $request, int $id)
     {
         $commentaire = ArticleCommentaire::findOrFail($id);
 
-        // Vérifier les permissions
-        if (! $request->user()->isSuperAdmin()) {
+        if (!$request->user()->isSuperAdmin()) {
             if ($commentaire->article->ministere_id !== $request->user()->ministere_id) {
-                return response()->json(['success' => false, 'message' => 'Accès refusé'], 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé',
+                ], 403);
             }
         }
 
@@ -290,34 +191,21 @@ class ArticleCommentaireController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Commentaire rejeté',
-            'data' => $commentaire
+            'data'   => $commentaire
         ]);
     }
 
-    /**
-     * @OA\Delete(
-     *     path="/ministry/comments/{id}",
-     *     tags={"Admin - Commentaires"},
-     *     summary="Supprimer un commentaire",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="Commentaire supprimé",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Commentaire supprimé")
-     *         )
-     *     )
-     * )
-     */
-
-    public function destroy(Request $request, $id)
+    // DELETE /api/ministry/comments/{id}
+    public function destroy(Request $request, int $id)
     {
         $commentaire = ArticleCommentaire::findOrFail($id);
 
-        // Vérifier les permissions
-        if (! $request->user()->isSuperAdmin()) {
+        if (!$request->user()->isSuperAdmin()) {
             if ($commentaire->article->ministere_id !== $request->user()->ministere_id) {
-                return response()->json(['success' => false, 'message' => 'Accès refusé'], 403);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Accès refusé',
+                ], 403);
             }
         }
 
@@ -329,38 +217,18 @@ class ArticleCommentaireController extends Controller
         ]);
     }
 
-      /**
-     * @OA\Post(
-     *     path="/ministry/comments/bulk-approve",
-     *     tags={"Admin - Commentaires"},
-     *     summary="Approuver plusieurs commentaires",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="ids", type="array", @OA\Items(type="integer"), example={1,2,3})
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Commentaires approuvés",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="3 commentaire(s) approuvé(s)")
-     *         )
-     *     )
-     * )
-     */
+    // POST /api/ministry/comments/bulk-approve
     public function bulkApprove(Request $request)
     {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'integer|exists:article_commentaires,id'
+        $validated = $request->validate([
+            'ids'   => 'required|array',
+            'ids.*' => 'integer|exists:article_commentaires,id',
         ]);
 
         $ministereId = $this->getMinistereId($request);
 
-        $query = ArticleCommentaire::whereIn('id', $request->ids);
+        $query = ArticleCommentaire::whereIn('id', $validated['ids']);
 
-        // Filtrer par ministère si nécessaire
         if ($ministereId) {
             $query->whereHas('article', function ($q) use ($ministereId) {
                 $q->where('ministere_id', $ministereId);
@@ -375,36 +243,17 @@ class ArticleCommentaireController extends Controller
         ]);
     }
 
-      /**
-     * @OA\Post(
-     *     path="/ministry/comments/bulk-reject",
-     *     tags={"Admin - Commentaires"},
-     *     summary="Rejeter plusieurs commentaires",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="ids", type="array", @OA\Items(type="integer"), example={1,2,3})
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Commentaires rejetés",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="3 commentaire(s) rejeté(s)")
-     *         )
-     *     )
-     * )
-     */
+    // POST /api/ministry/comments/bulk-reject
     public function bulkReject(Request $request)
     {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'integer|exists:article_commentaires,id'
+        $validated = $request->validate([
+            'ids'   => 'required|array',
+            'ids.*' => 'integer|exists:article_commentaires,id',
         ]);
 
         $ministereId = $this->getMinistereId($request);
 
-        $query = ArticleCommentaire::whereIn('id', $request->ids);
+        $query = ArticleCommentaire::whereIn('id', $validated['ids']);
 
         if ($ministereId) {
             $query->whereHas('article', function ($q) use ($ministereId) {
@@ -420,37 +269,17 @@ class ArticleCommentaireController extends Controller
         ]);
     }
 
-        /**
-     * @OA\Post(
-     *     path="/ministry/comments/bulk-delete",
-     *     tags={"Admin - Commentaires"},
-     *     summary="Supprimer plusieurs commentaires",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="ids", type="array", @OA\Items(type="integer"), example={1,2,3})
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Commentaires supprimés",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="3 commentaire(s) supprimé(s)")
-     *         )
-     *     )
-     * )
-     */
-
+    // POST /api/ministry/comments/bulk-delete
     public function bulkDelete(Request $request)
     {
-        $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'integer|exists:article_commentaires,id'
+        $validated = $request->validate([
+            'ids'   => 'required|array',
+            'ids.*' => 'integer|exists:article_commentaires,id',
         ]);
 
         $ministereId = $this->getMinistereId($request);
 
-        $query = ArticleCommentaire::whereIn('id', $request->ids);
+        $query = ArticleCommentaire::whereIn('id', $validated['ids']);
 
         if ($ministereId) {
             $query->whereHas('article', function ($q) use ($ministereId) {
@@ -464,5 +293,16 @@ class ArticleCommentaireController extends Controller
             'success' => true,
             'message' => "{$count} commentaire(s) supprimé(s)"
         ]);
+    }
+
+    private function getMinistereId(Request $request): ?int
+    {
+        if ($request->user()->isSuperAdmin()) {
+            if ($request->has('ministere_id')) {
+                return (int) $request->ministere_id;
+            }
+            return null;
+        }
+        return $request->user()->ministere_id;
     }
 }

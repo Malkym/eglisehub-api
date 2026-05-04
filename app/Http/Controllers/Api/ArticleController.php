@@ -6,21 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\LogAction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
+    private const RATE_LIMIT_MAX = 10;
+    private const RATE_LIMIT_DECAY = 3600;
+
     // GET /api/ministry/articles
     public function index(Request $request)
     {
         $ministereId = $this->getMinistereId($request);
+        
         $articles = Article::when($ministereId, fn($q) => $q->where('ministere_id', $ministereId))
             ->with('auteur:id,name,prenom')
-            ->when($request->statut,       fn($q) => $q->where('statut', $request->statut))
-            ->when($request->categorie,    fn($q) => $q->where('categorie', $request->categorie))
+            ->when($request->statut, fn($q) => $q->where('statut', $request->statut))
+            ->when($request->categorie, fn($q) => $q->where('categorie', $request->categorie))
             ->when($request->type_contenu, fn($q) => $q->where('type_contenu', $request->type_contenu))
-            ->when($request->en_avant,     fn($q) => $q->where('en_avant', true))
-            ->when($request->search,       fn($q) => $q->where('titre', 'like', "%{$request->search}%"))
+            ->when($request->en_avant, fn($q) => $q->where('en_avant', true))
+            ->when($request->search, fn($q) => $q->where('titre', 'like', "%{$request->search}%"))
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
@@ -30,46 +35,46 @@ class ArticleController extends Controller
     // POST /api/ministry/articles
     public function store(Request $request)
     {
-        $request->validate([
-            'titre'          => 'required|string|max:255',
-            'type_contenu'   => 'required|in:texte,lien_externe,video_youtube,audio,mixte',
-            'resume'         => 'nullable|string|max:500',
-            'contenu'        => 'nullable|string',
-            'image_une'      => 'nullable|string',
-            'categorie'      => 'nullable|string|max:100',
-            'url_externe'    => 'required_if:type_contenu,lien_externe|nullable|url',
-            'youtube_id'     => 'required_if:type_contenu,video_youtube|nullable|string|max:20',
-            'duree'          => 'nullable|string|max:20',
-            'auteur_externe' => 'nullable|string|max:255',
-            'en_avant'       => 'boolean',
-            'commentaires_actifs' => 'boolean', // AJOUTER
-            'statut'         => 'in:publie,brouillon',
-            'date_publication' => 'nullable|date',
+        $validated = $request->validate([
+            'titre'              => 'required|string|max:255',
+            'type_contenu'      => 'required|in:texte,lien_externe,video_youtube,audio,mixte',
+            'resume'            => 'nullable|string|max:500',
+            'contenu'           => 'nullable|string',
+            'image_une'         => 'nullable|string',
+            'categorie'         => 'nullable|string|max:100',
+            'url_externe'       => 'required_if:type_contenu,lien_externe|nullable|url',
+            'youtube_id'        => 'required_if:type_contenu,video_youtube|nullable|string|max:20',
+            'duree'             => 'nullable|string|max:20',
+            'auteur_externe'    => 'nullable|string|max:255',
+            'en_avant'          => 'nullable|boolean',
+            'commentaires_actifs' => 'nullable|boolean',
+            'statut'            => 'nullable|in:publie,brouillon',
+            'date_publication'   => 'nullable|date',
         ]);
 
         $ministereId = $this->getMinistereId($request);
-        $slug = $this->generateUniqueSlug($request->titre, $ministereId);
+        $slug = $this->generateUniqueSlug($validated['titre'], $ministereId);
 
         $article = Article::create([
-            'ministere_id'     => $ministereId,
-            'user_id'          => $request->user()->id,
-            'titre'            => $request->titre,
-            'slug'             => $slug,
-            'type_contenu'     => $request->type_contenu,
-            'resume'           => $request->resume,
-            'contenu'          => $request->contenu,
-            'image_une'        => $request->image_une,
-            'categorie'        => $request->categorie,
-            'url_externe'      => $request->url_externe,
-            'youtube_id'       => $request->youtube_id,
-            'duree'            => $request->duree,
-            'auteur_externe'   => $request->auteur_externe,
-            'en_avant'         => $request->en_avant ?? false,
-            'commentaires_actifs' => $request->commentaires_actifs ?? true, // AJOUTER
-            'statut'           => $request->statut ?? 'brouillon',
-            'date_publication' => $request->statut === 'publie'
-                ? ($request->date_publication ?? now())
-                : $request->date_publication,
+            'ministere_id'      => $ministereId,
+            'user_id'           => $request->user()->id,
+            'titre'             => $validated['titre'],
+            'slug'              => $slug,
+            'type_contenu'      => $validated['type_contenu'],
+            'resume'           => $validated['resume'] ?? null,
+            'contenu'          => $validated['contenu'] ?? null,
+            'image_une'        => $validated['image_une'] ?? null,
+            'categorie'        => $validated['categorie'] ?? null,
+            'url_externe'      => $validated['url_externe'] ?? null,
+            'youtube_id'       => $validated['youtube_id'] ?? null,
+            'duree'            => $validated['duree'] ?? null,
+            'auteur_externe'   => $validated['auteur_externe'] ?? null,
+            'en_avant'         => $validated['en_avant'] ?? false,
+            'commentaires_actifs' => $validated['commentaires_actifs'] ?? true,
+            'statut'           => $validated['statut'] ?? 'brouillon',
+            'date_publication' => ($validated['statut'] ?? 'brouillon') === 'publie'
+                ? ($validated['date_publication'] ?? now())
+                : ($validated['date_publication'] ?? null),
         ]);
 
         $this->log($request, 'create_article', 'articles', "Création article: {$article->titre}");
@@ -85,6 +90,7 @@ class ArticleController extends Controller
     public function show(Request $request, string $id)
     {
         $article = $this->findArticleForUser($request, $id);
+        
         return response()->json(['success' => true, 'data' => $article->load('auteur:id,name,prenom')]);
     }
 
@@ -92,51 +98,33 @@ class ArticleController extends Controller
     public function update(Request $request, string $id)
     {
         $article = $this->findArticleForUser($request, $id);
-        $request->validate([
-            'titre'          => 'required|string|max:255',
-            'type_contenu'   => 'required|in:texte,lien_externe,video_youtube,audio,mixte',
-            'resume'         => 'nullable|string|max:500',
-            'contenu'        => 'nullable|string',
-            'image_une'      => 'nullable|string',
-            'categorie'      => 'nullable|string|max:100',
-            'url_externe'    => 'required_if:type_contenu,lien_externe|nullable|url',
-            'youtube_id'     => 'required_if:type_contenu,video_youtube|nullable|string|max:20',
-            'duree'          => 'nullable|string|max:20',
-            'auteur_externe' => 'nullable|string|max:255',
-            'en_avant'       => 'boolean',
-            'commentaires_actifs' => 'boolean', // AJOUTER
-            'statut'         => 'in:publie,brouillon',
-            'date_publication' => 'nullable|date',
+        
+        $validated = $request->validate([
+            'titre'              => 'sometimes|string|max:255',
+            'type_contenu'      => 'sometimes|in:texte,lien_externe,video_youtube,audio,mixte',
+            'resume'            => 'nullable|string|max:500',
+            'contenu'           => 'nullable|string',
+            'image_une'         => 'nullable|string',
+            'categorie'         => 'nullable|string|max:100',
+            'url_externe'       => 'nullable|url',
+            'youtube_id'        => 'nullable|string|max:20',
+            'duree'             => 'nullable|string|max:20',
+            'auteur_externe'    => 'nullable|string|max:255',
+            'en_avant'          => 'nullable|boolean',
+            'commentaires_actifs' => 'nullable|boolean',
+            'statut'            => 'nullable|in:publie,brouillon',
+            'date_publication'   => 'nullable|date',
         ]);
 
         if ($request->has('titre') && $request->titre !== $article->titre) {
-            $request->merge([
-                'slug' => $this->generateUniqueSlug($request->titre, $article->ministere_id, $id)
-            ]);
+            $validated['slug'] = $this->generateUniqueSlug($request->titre, $article->ministere_id, $id);
         }
 
-        // Si on publie maintenant, on fixe la date
-        if ($request->statut === 'publie' && ! $article->date_publication) {
-            $request->merge(['date_publication' => now()]);
+        if ($request->statut === 'publie' && !$article->date_publication) {
+            $validated['date_publication'] = now();
         }
 
-        $article->update($request->only([
-            'titre',
-            'slug',
-            'type_contenu',
-            'resume',
-            'contenu',
-            'image_une',
-            'categorie',
-            'url_externe',
-            'youtube_id',
-            'duree',
-            'auteur_externe',
-            'en_avant',
-            'commentaires_actifs',
-            'statut',
-            'date_publication',
-        ]));
+        $article->update(array_filter($validated));
 
         $this->log($request, 'update_article', 'articles', "Modification article: {$article->titre}");
 
@@ -152,6 +140,7 @@ class ArticleController extends Controller
     {
         $article = $this->findArticleForUser($request, $id);
         $titre = $article->titre;
+        
         $article->delete();
 
         $this->log($request, 'delete_article', 'articles', "Suppression article: {$titre}");
@@ -160,53 +149,30 @@ class ArticleController extends Controller
     }
 
     // PATCH /api/ministry/articles/{id}/publish
-// APRÈS — toggle publication/dépublication
-    /**
-     * @OA\Patch(
-     *     path="/ministry/articles/{id}/publish",
-     *     tags={"Articles"},
-     *     summary="Publier ou dépublier un article (toggle)",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
-     *     @OA\Response(response=200, description="Statut modifié",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success",  type="boolean", example=true),
-     *             @OA\Property(property="message",  type="string",  example="Article publié."),
-     *             @OA\Property(property="statut",   type="string",  enum={"publie","brouillon"}),
-     *             @OA\Property(property="data",     type="object")
-     *         )
-     *     )
-     * )
-     */
     public function publish(Request $request, string $id)
     {
-        $article = Article::findOrFail($id);
-
-        // Vérifier ownership
-        if (! $request->user()->isSuperAdmin()) {
-            if ($article->ministere_id !== $request->user()->ministere_id) {
-                return response()->json(['success' => false, 'message' => 'Accès refusé.'], 403);
-            }
+        if (!$request->user()->isSuperAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Accès refusé.'], 403);
         }
 
-        // Toggle
+        $article = Article::findOrFail($id);
+
+        if ($request->user()->isSuperAdmin() && $article->ministere_id !== $request->user()->ministere_id) {
+            return response()->json(['success' => false, 'message' => 'Accès refusé.'], 403);
+        }
+
         if ($article->statut === 'publie') {
             $article->update(['statut' => 'brouillon']);
             $message = 'Article dépublié.';
         } else {
             $article->update([
-                'statut'           => 'publie',
+                'statut'            => 'publie',
                 'date_publication' => $article->date_publication ?? now(),
             ]);
             $message = 'Article publié.';
         }
 
-        $this->log(
-            $request,
-            'toggle_publish_article',
-            'articles',
-            "{$message} : {$article->titre}"
-        );
+        $this->log($request, 'toggle_publish_article', 'articles', "{$message} : {$article->titre}");
 
         return response()->json([
             'success' => true,
@@ -220,176 +186,84 @@ class ArticleController extends Controller
     public function feature(Request $request, string $id)
     {
         $article = $this->findArticleForUser($request, $id);
-        $article->update(['en_avant' => ! $article->en_avant]);
+        
+        $article->update(['en_avant' => !$article->en_avant]);
         $etat = $article->fresh()->en_avant ? 'mis en avant' : 'retiré de la une';
 
-        return response()->json(['success' => true, 'message' => "Article {$etat}.", 'data' => $article->fresh()]);
+        return response()->json([
+            'success' => true, 
+            'message' => "Article {$etat}.", 
+            'data' => $article->fresh()
+        ]);
     }
 
-
-    // Helpers
-    private function getMinistereId(Request $request): ?int
-    {
-        // Super admin peut cibler n'importe quel ministère
-        if ($request->user()->isSuperAdmin()) {
-            if ($request->has('ministere_id')) {
-                return (int) $request->ministere_id;
-            }
-            // Super admin sans ministere_id spécifié = voir tout
-            return null;
-        }
-
-        return $request->user()->ministere_id;
-    }
-
-    private function findArticleForUser(Request $request, string $id): Article
-    {
-        $article = Article::findOrFail($id);
-
-        if (! $request->user()->isSuperAdmin()) {
-            if ($article->ministere_id !== $request->user()->ministere_id) {
-                abort(403, 'Accès refusé à cet article.');
-            }
-        }
-
-        return $article;
-    }
-
-    private function generateUniqueSlug(string $titre, int $ministereId, ?string $exceptId = null): string
-    {
-        $slug = Str::slug($titre);
-        $original = $slug;
-        $count = 1;
-
-        while (
-            Article::where('ministere_id', $ministereId)
-            ->where('slug', $slug)
-            ->when($exceptId, fn($q) => $q->where('id', '!=', $exceptId))
-            ->exists()
-        ) {
-            $slug = $original . '-' . $count++;
-        }
-
-        return $slug;
-    }
-
-    /**
-     * @OA\Get(
-     *     path="/public/articles/{slug}/rating",
-     *     tags={"Public - Articles"},
-     *     summary="Récupérer la note moyenne d'un article",
-     *     @OA\Parameter(name="slug", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="subdomain", in="query", @OA\Schema(type="string", example="crc")),
-     *     @OA\Response(response=200, description="Note moyenne",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="average", type="number", format="float", example=4.5),
-     *                 @OA\Property(property="count", type="integer", example=12)
-     *             )
-     *         )
-     *     )
-     * )
-     */
-
-    /**
-     * GET /api/public/articles/{slug}/rating
-     * Récupérer la note moyenne d'un article
-     */
+    // GET /api/public/articles/{slug}/rating
     public function getRating(Request $request, string $slug)
     {
-        $subdomain = $request->query('subdomain') ?? 'crc';
+        $subdomain = $request->query('subdomain', 'crc');
 
         $article = Article::whereHas(
             'ministere',
-            fn($q) =>
-            $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+            fn($q) => $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
         )->where('slug', $slug)->where('statut', 'publie')->firstOrFail();
 
         return response()->json([
             'success' => true,
             'data' => [
                 'average' => round($article->average_rating, 1),
-                'count' => $article->rating_count,
+                'count'  => $article->rating_count,
             ]
         ]);
     }
 
-    /**
-     * @OA\Post(
-     *     path="/public/articles/{slug}/rate",
-     *     tags={"Public - Articles"},
-     *     summary="Noter un article",
-     *     @OA\Parameter(name="slug", in="path", required=true, @OA\Schema(type="string")),
-     *     @OA\Parameter(name="subdomain", in="query", @OA\Schema(type="string", example="crc")),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="note", type="integer", minimum=1, maximum=5, example=5)
-     *         )
-     *     ),
-     *     @OA\Response(response=200, description="Note enregistrée",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Merci pour votre note !"),
-     *             @OA\Property(property="data", type="object",
-     *                 @OA\Property(property="average", type="number", format="float", example=4.5),
-     *                 @OA\Property(property="count", type="integer", example=13)
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(response=429, description="Déjà noté",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Vous avez déjà noté cet article.")
-     *         )
-     *     )
-     * )
-     */
-
-    /**
-     * POST /api/public/articles/{slug}/rate
-     * Noter un article
-     */
+    // POST /api/public/articles/{slug}/rate
     public function rate(Request $request, string $slug)
     {
+        $rateLimitKey = 'rate:' . $slug . ':' . ($request->ip() ?? 'unknown');
+        
+        if (RateLimiter::tooManyAttempts($rateLimitKey, self::RATE_LIMIT_MAX)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vous avez déjà noté cet article récemment.',
+            ], 429);
+        }
+
         $request->validate([
             'note' => 'required|integer|min:1|max:5',
         ]);
 
-        $subdomain = $request->query('subdomain') ?? 'crc';
+        $subdomain = $request->query('subdomain', 'crc');
 
         $article = Article::whereHas(
             'ministere',
-            fn($q) =>
-            $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+            fn($q) => $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
         )->where('slug', $slug)->where('statut', 'publie')->firstOrFail();
 
-        // Récupérer l'IP et la session
-        $ip = $request->ip();
-        $sessionId = $request->header('X-Session-Id') ?? session()->getId();
+        $ip = $request->getClientIp();
+        $sessionId = $request->header('X-Session-Id') ?? null;
 
-        // Vérifier si l'utilisateur a déjà voté
         if ($article->hasUserRated($ip, $sessionId)) {
+            RateLimiter::hit($rateLimitKey, self::RATE_LIMIT_DECAY);
             return response()->json([
                 'success' => false,
-                'message' => 'Vous avez déjà noté cet article.'
+                'message' => 'Vous avez déjà noté cet article.',
             ], 429);
         }
 
-        // Ajouter la note
         $article->addRating($request->note, $ip, $sessionId);
+        RateLimiter::hit($rateLimitKey, self::RATE_LIMIT_DECAY);
 
         return response()->json([
             'success' => true,
             'message' => 'Merci pour votre note !',
-            'data' => [
+            'data'    => [
                 'average' => round($article->fresh()->average_rating, 1),
-                'count' => $article->fresh()->rating_count,
+                'count'   => $article->fresh()->rating_count,
             ]
         ]);
     }
 
+    // GET /api/public/articles
     public function publicIndex(Request $request)
     {
         $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
@@ -402,11 +276,10 @@ class ArticleController extends Controller
             ->with('auteur:id,name,prenom')
             ->withAvg('notes', 'note')
             ->withCount('notes')
-            ->withCount(['tousCommentaires as commentaires_count' => function ($q) {
+            ->withCount(['commentaires as commentaires_count' => function ($q) {
                 $q->where('statut', 'approuve');
             }]);
 
-        // Support pour plusieurs catégories (séparées par des virgules)
         if ($request->has('categories')) {
             $categories = explode(',', $request->categories);
             $query->whereIn('categorie', $categories);
@@ -434,7 +307,7 @@ class ArticleController extends Controller
         return response()->json(['success' => true, 'data' => $articles]);
     }
 
-    // Mettre à jour la méthode publicShow pour inclure les notes
+    // GET /api/public/articles/{slug}
     public function publicShow(Request $request, string $slug)
     {
         $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
@@ -450,31 +323,71 @@ class ArticleController extends Controller
             ->withCount('notes')
             ->firstOrFail();
 
-        // Incrémenter les vues
         $article->increment('vues');
 
         return response()->json(['success' => true, 'data' => $article->load('auteur:id,name,prenom')]);
     }
 
-    private function log(Request $request, string $action, string $module, string $details, ?string $lien = null): void
+    protected function getMinistereId(Request $request): ?int
     {
-        $log = LogAction::create([
+        if ($request->user()->isSuperAdmin()) {
+            if ($request->has('ministere_id')) {
+                return (int) $request->ministere_id;
+            }
+            return null;
+        }
+
+        return $request->user()->ministere_id;
+    }
+
+    protected function findArticleForUser(Request $request, string $id): Article
+    {
+        $article = Article::findOrFail($id);
+
+        if (!$request->user()->isSuperAdmin()) {
+            if ($article->ministere_id !== $request->user()->ministere_id) {
+                abort(403, 'Accès refusé à cet article.');
+            }
+        }
+
+        return $article;
+    }
+
+    protected function generateUniqueSlug(string $titre, int $ministereId, ?string $exceptId = null): string
+    {
+        $slug = Str::slug($titre);
+        $original = $slug;
+        $count = 1;
+
+        while (
+            Article::where('ministere_id', $ministereId)
+                ->where('slug', $slug)
+                ->when($exceptId, fn($q) => $q->where('id', '!=', $exceptId))
+                ->exists()
+        ) {
+            $slug = $original . '-' . $count++;
+        }
+
+        return $slug;
+    }
+
+    protected function log(Request $request, string $action, string $module, string $details): void
+    {
+        LogAction::create([
             'user_id'      => $request->user()->id,
             'ministere_id' => $request->user()->ministere_id,
-            'action'       => $action,
-            'module'       => $module,
-            'details'      => $details,
-            'ip'           => $request->ip(),
-            'date_action'  => now(),
+            'action'     => $action,
+            'module'     => $module,
+            'details'    => $details,
+            'ip'         => $request->getClientIp(),
+            'date_action' => now(),
         ]);
 
-        // Envoyer les notifications
         $ministere = $request->user()->ministere;
         LogAction::notifyForAction($action, [
-            'ministere_id' => $request->user()->ministere_id,
+            'ministere_id'   => $request->user()->ministere_id,
             'ministere_nom' => $ministere?->nom,
-            'details' => $details,
-            'lien' => $lien,
+            'details'     => $details,
         ]);
     }
 }
