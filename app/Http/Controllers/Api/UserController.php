@@ -3,18 +3,19 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Http\Resources\UserResource;
 use App\Models\User;
-use App\Models\LogAction;
+use App\Traits\HasActivityLogging;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 
 class UserController extends Controller
 {
-    private const MAX_LOGIN_ATTEMPTS = 5;
-    private const LOGIN_LOCKOUT_SECONDS = 300;
+    use HasActivityLogging;
 
-    // GET /api/admin/users
     public function index(Request $request)
     {
         if (!$request->user()->isSuperAdmin()) {
@@ -41,8 +42,7 @@ class UserController extends Controller
         return response()->json(['success' => true, 'data' => $users]);
     }
 
-    // POST /api/admin/users
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
         if (!$request->user()->isSuperAdmin()) {
             return response()->json([
@@ -51,24 +51,18 @@ class UserController extends Controller
             ], 403);
         }
 
-        $validated = $request->validate([
-            'name'         => 'required|string|max:255',
-            'prenom'       => 'nullable|string|max:255',
-            'email'        => 'required|email|max:255|unique:users,email',
-            'password'     => 'required|string|min:8',
-            'role'         => 'required|in:super_admin,admin_ministere',
-            'ministere_id' => 'required_if:role,admin_ministere|nullable|exists:ministeres,id',
-            'actif'        => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
         $user = User::create([
             'name'          => $validated['name'],
             'prenom'        => $validated['prenom'] ?? null,
-            'email'         => $validated['email'],
-            'password'      => Hash::make($validated['password']),
-            'role'          => $validated['role'],
-            'ministere_id'  => $validated['role'] === 'admin_ministere' ? $validated['ministere_id'] : null,
-            'actif'         => $validated['actif'] ?? true,
+            'email'        => $validated['email'],
+            'password'     => Hash::make($validated['password']),
+            'role'         => $validated['role'],
+            'ministere_id' => in_array($validated['role'], ['admin_ministere', 'createur_contenu', 'moderateur']) 
+                ? $validated['ministere_id'] 
+                : null,
+            'actif'        => $validated['actif'] ?? true,
         ]);
 
         $this->logAction($request, 'create_user', 'utilisateurs', "Création: {$user->email}");
@@ -76,11 +70,10 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Utilisateur créé.',
-            'data'    => $user->load('ministere:id,nom'),
+            'data'    => new UserResource($user->load('ministere:id,nom')),
         ], 201);
     }
 
-    // GET /api/admin/users/{id}
     public function show(Request $request, string $id)
     {
         if (!$request->user()->isSuperAdmin()) {
@@ -92,11 +85,10 @@ class UserController extends Controller
 
         $user = User::with('ministere:id,nom,sous_domaine')->findOrFail($id);
 
-        return response()->json(['success' => true, 'data' => $user]);
+        return response()->json(['success' => true, 'data' => new UserResource($user)]);
     }
 
-    // PUT /api/admin/users/{id}
-    public function update(Request $request, string $id)
+    public function update(UpdateUserRequest $request, string $id)
     {
         if (!$request->user()->isSuperAdmin()) {
             return response()->json([
@@ -106,16 +98,7 @@ class UserController extends Controller
         }
 
         $user = User::findOrFail($id);
-
-        $validated = $request->validate([
-            'name'         => 'sometimes|string|max:255',
-            'prenom'       => 'nullable|string|max:255',
-            'email'        => "sometimes|email|max:255|unique:users,email,{$id}",
-            'password'     => 'nullable|string|min:8',
-            'role'         => 'sometimes|in:super_admin,admin_ministere',
-            'ministere_id' => 'nullable|exists:ministeres,id',
-            'actif'        => 'nullable|boolean',
-        ]);
+        $validated = $request->validated();
 
         $data = $request->only(['name', 'prenom', 'email', 'role', 'ministere_id', 'actif']);
 
@@ -130,11 +113,10 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Utilisateur mis à jour.',
-            'data'    => $user->fresh()->load('ministere:id,nom'),
+            'data'    => new UserResource($user->fresh()->load('ministere:id,nom')),
         ]);
     }
 
-    // DELETE /api/admin/users/{id}
     public function destroy(Request $request, string $id)
     {
         if (!$request->user()->isSuperAdmin()) {
@@ -167,7 +149,6 @@ class UserController extends Controller
         return response()->json(['success' => true, 'message' => 'Utilisateur désactivé.']);
     }
 
-    // POST /api/admin/users/{id}/toggle
     public function toggle(Request $request, string $id)
     {
         if (!$request->user()->isSuperAdmin()) {
@@ -194,11 +175,10 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => "Utilisateur {$etat}.",
-            'data'    => $user->fresh(),
+            'data'    => new UserResource($user->fresh()),
         ]);
     }
 
-    // POST /api/admin/users/{id}/impersonate
     public function impersonate(Request $request, string $id)
     {
         $rateLimitKey = 'impersonate:' . $request->user()->id;
@@ -253,12 +233,11 @@ class UserController extends Controller
             'success' => true,
             'message' => "Session temporaire (30 min) en tant que {$targetUser->name}.",
             'token'  => $token,
-            'user'   => $targetUser->load('ministere:id,nom'),
+            'user'   => new UserResource($targetUser->load('ministere:id,nom')),
             'expires_in' => 1800,
         ]);
     }
 
-    // GET /api/ministry/users
     public function ministryIndex(Request $request)
     {
         $ministereId = $request->user()->ministere_id;
@@ -278,36 +257,46 @@ class UserController extends Controller
         return response()->json(['success' => true, 'data' => $users]);
     }
 
-    // POST /api/ministry/users
     public function ministryStore(Request $request)
     {
+        $user = $request->user();
+        
+        if (!in_array($user->role, ['admin_ministere', 'createur_contenu'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès refusé. Rôle admin_ministere ou createur_contenu requis.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'name'      => 'required|string|max:255',
             'prenom'    => 'nullable|string|max:255',
             'email'     => 'required|email|max:255|unique:users,email',
             'password'  => 'required|string|min:8',
+            'role'      => 'nullable|in:admin_ministere,createur_contenu,moderateur',
         ]);
 
-        $user = User::create([
+        $role = $validated['role'] ?? 'createur_contenu';
+
+        $newUser = User::create([
             'name'          => $validated['name'],
             'prenom'        => $validated['prenom'] ?? null,
-            'email'         => $validated['email'],
+            'email'        => $validated['email'],
             'password'     => Hash::make($validated['password']),
-            'role'         => 'admin_ministere',
-            'ministere_id' => $request->user()->ministere_id,
-            'actif'         => true,
+            'role'         => $role,
+            'ministere_id' => $user->ministere_id,
+            'actif'        => true,
         ]);
 
-        $this->logAction($request, 'create_ministry_user', 'utilisateurs', "Création: {$user->email}");
+        $this->logAction($request, 'create_ministry_user', 'utilisateurs', "Création: {$newUser->email}");
 
         return response()->json([
             'success' => true,
             'message' => 'Utilisateur créé pour le ministère.',
-            'data'    => $user,
+            'data'    => new UserResource($newUser),
         ], 201);
     }
 
-    // PUT /api/ministry/users/{id}
     public function ministryUpdate(Request $request, string $id)
     {
         $user = User::where('ministere_id', $request->user()->ministere_id)
@@ -325,11 +314,10 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Utilisateur mis à jour.',
-            'data'    => $user->fresh(),
+            'data'    => new UserResource($user->fresh()),
         ]);
     }
 
-    // DELETE /api/ministry/users/{id}
     public function ministryDestroy(Request $request, string $id)
     {
         $user = User::where('ministere_id', $request->user()->ministere_id)
@@ -345,25 +333,5 @@ class UserController extends Controller
         $user->update(['actif' => false]);
 
         return response()->json(['success' => true, 'message' => 'Utilisateur désactivé.']);
-    }
-
-    private function logAction(Request $request, string $action, string $module, string $details): void
-    {
-        LogAction::create([
-            'user_id'      => $request->user()->id,
-            'ministere_id' => $request->user()->ministere_id,
-            'action'     => $action,
-            'module'     => $module,
-            'details'    => $details,
-            'ip'         => $request->getClientIp(),
-            'date_action' => now(),
-        ]);
-
-        $ministere = $request->user()->ministere;
-        LogAction::notifyForAction($action, [
-            'ministere_id'   => $request->user()->ministere_id,
-            'ministere_nom' => $ministere?->nom,
-            'details'     => $details,
-        ]);
     }
 }

@@ -26,7 +26,7 @@
                     "Auth"
                 ],
                 "summary": "Connexion utilisateur",
-                "description": "Authentifie un utilisateur et retourne un token Sanctum valide",
+                "description": "Authentifie un utilisateur et retourne un token Sanctum",
                 "operationId": "login",
                 "requestBody": {
                     "required": true,
@@ -50,150 +50,18 @@
                         }
                     },
                     "401": {
-                        "description": "Identifiants incorrects",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Identifiants incorrects."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Identifiants incorrects"
                     },
                     "422": {
-                        "description": "Validation échouée",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "L'email est requis."
-                                        },
-                                        "errors": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Validation échouée"
                     },
                     "429": {
-                        "description": "Trop de tentatives",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Trop de tentatives de connexion. Réessayez dans 5 minute(s)."
-                                        },
-                                        "retry_after": {
-                                            "type": "integer",
-                                            "example": 300
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Trop de tentatives"
                     }
                 }
             }
         },
-        "/api/register": {
-            "post": {
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Inscription nouveau ministère",
-                "description": "Crée un nouveau ministère et un compte administrateur associé",
-                "operationId": "register",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RegisterRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Ministère créé avec succès",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Ministère créé avec succès."
-                                        },
-                                        "token": {
-                                            "type": "string",
-                                            "example": "74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe"
-                                        },
-                                        "user": {
-                                            "$ref": "#/components/schemas/User"
-                                        },
-                                        "ministere": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "Validation échouée",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string"
-                                        },
-                                        "errors": {
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/api/logout": {
+        "/logout": {
             "post": {
                 "tags": [
                     "Auth"
@@ -203,24 +71,7 @@
                 "operationId": "logout",
                 "responses": {
                     "200": {
-                        "description": "Déconnexion réussie",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Déconnexion réussie."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Déconnexion réussie"
                     },
                     "401": {
                         "description": "Non authentifié"
@@ -233,7 +84,7 @@
                 ]
             }
         },
-        "/api/me": {
+        "/me": {
             "get": {
                 "tags": [
                     "Auth"
@@ -243,23 +94,7 @@
                 "operationId": "me",
                 "responses": {
                     "200": {
-                        "description": "Profil retourné",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "user": {
-                                            "$ref": "#/components/schemas/User"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Profil retourné"
                     },
                     "401": {
                         "description": "Non authentifié"
@@ -272,7 +107,7 @@
                 ]
             }
         },
-        "/api/change-password": {
+        "/change-password": {
             "post": {
                 "tags": [
                     "Auth"
@@ -292,44 +127,10 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Mot de passe modifié",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Mot de passe mis à jour. Autres sessions déconnectées."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Mot de passe modifié"
                     },
                     "422": {
-                        "description": "Validation échouée ou ancien mot de passe incorrect",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": false
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Ancien mot de passe incorrect."
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Ancien mot de passe incorrect"
                     },
                     "401": {
                         "description": "Non authentifié"
@@ -342,7 +143,7 @@
                 ]
             }
         },
-        "/api/refresh-token": {
+        "/refresh-token": {
             "post": {
                 "tags": [
                     "Auth"
@@ -352,24 +153,7 @@
                 "operationId": "refreshToken",
                 "responses": {
                     "200": {
-                        "description": "Token rafraîchi",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "token": {
-                                            "type": "string",
-                                            "example": "74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Token rafraîchi"
                     },
                     "401": {
                         "description": "Non authentifié"
@@ -4532,184 +4316,6 @@
     },
     "components": {
         "schemas": {
-            "User": {
-                "properties": {
-                    "id": {
-                        "type": "integer",
-                        "example": 1
-                    },
-                    "name": {
-                        "type": "string",
-                        "example": "Mologbama"
-                    },
-                    "prenom": {
-                        "type": "string",
-                        "example": "Abishadai",
-                        "nullable": true
-                    },
-                    "email": {
-                        "type": "string",
-                        "format": "email",
-                        "example": "admin@eglisehub.org"
-                    },
-                    "role": {
-                        "type": "string",
-                        "enum": [
-                            "super_admin",
-                            "admin_ministere",
-                            "createur_contenu",
-                            "moderateur"
-                        ],
-                        "example": "super_admin"
-                    },
-                    "ministere_id": {
-                        "type": "integer",
-                        "example": 1,
-                        "nullable": true
-                    },
-                    "actif": {
-                        "type": "boolean",
-                        "example": true
-                    },
-                    "ministere": {
-                        "type": "object",
-                        "nullable": true
-                    }
-                },
-                "type": "object"
-            },
-            "LoginRequest": {
-                "required": [
-                    "email",
-                    "password"
-                ],
-                "properties": {
-                    "email": {
-                        "type": "string",
-                        "format": "email",
-                        "example": "admin@eglisehub.org"
-                    },
-                    "password": {
-                        "type": "string",
-                        "format": "password",
-                        "example": "Password123"
-                    }
-                },
-                "type": "object"
-            },
-            "LoginResponse": {
-                "properties": {
-                    "success": {
-                        "type": "boolean",
-                        "example": true
-                    },
-                    "token": {
-                        "description": "Token d'authentification Sanctum",
-                        "type": "string",
-                        "example": "74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe"
-                    },
-                    "user": {
-                        "$ref": "#/components/schemas/User"
-                    }
-                },
-                "type": "object"
-            },
-            "RegisterRequest": {
-                "required": [
-                    "name",
-                    "email",
-                    "password",
-                    "ministere_nom",
-                    "ministere_type",
-                    "sous_domaine"
-                ],
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "example": "Admin"
-                    },
-                    "prenom": {
-                        "type": "string",
-                        "example": "Jean",
-                        "nullable": true
-                    },
-                    "email": {
-                        "type": "string",
-                        "format": "email",
-                        "example": "admin@crc.org"
-                    },
-                    "password": {
-                        "type": "string",
-                        "format": "password",
-                        "example": "Password123"
-                    },
-                    "password_confirmation": {
-                        "type": "string",
-                        "example": "Password123"
-                    },
-                    "ministere_nom": {
-                        "type": "string",
-                        "example": "CRC Bangui"
-                    },
-                    "ministere_type": {
-                        "type": "string",
-                        "enum": [
-                            "eglise",
-                            "ministere",
-                            "organisation",
-                            "para_ecclesial",
-                            "mission"
-                        ],
-                        "example": "eglise"
-                    },
-                    "sous_domaine": {
-                        "type": "string",
-                        "example": "crc"
-                    },
-                    "ville": {
-                        "type": "string",
-                        "example": "Bangui",
-                        "nullable": true
-                    },
-                    "pays": {
-                        "type": "string",
-                        "example": "République centrafricaine",
-                        "nullable": true
-                    },
-                    "email_contact": {
-                        "type": "string",
-                        "format": "email",
-                        "example": "contact@crc.org",
-                        "nullable": true
-                    }
-                },
-                "type": "object"
-            },
-            "ChangePasswordRequest": {
-                "required": [
-                    "ancien_mot_de_passe",
-                    "nouveau_mot_de_passe",
-                    "nouveau_mot_de_passe_confirmation"
-                ],
-                "properties": {
-                    "ancien_mot_de_passe": {
-                        "type": "string",
-                        "format": "password",
-                        "example": "OldPassword123"
-                    },
-                    "nouveau_mot_de_passe": {
-                        "type": "string",
-                        "format": "password",
-                        "example": "NewPassword123"
-                    },
-                    "nouveau_mot_de_passe_confirmation": {
-                        "type": "string",
-                        "format": "password",
-                        "example": "NewPassword123"
-                    }
-                },
-                "type": "object"
-            },
             "Success": {
                 "properties": {
                     "success": {
@@ -5160,6 +4766,291 @@
                     "pages_count": {
                         "type": "integer",
                         "example": 2
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Mologbama"
+                    },
+                    "prenom": {
+                        "type": "string",
+                        "example": "Abishadai",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "admin@eglisehub.org"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "super_admin",
+                            "admin_ministere",
+                            "createur_contenu",
+                            "moderateur"
+                        ],
+                        "example": "super_admin"
+                    },
+                    "ministere_id": {
+                        "type": "integer",
+                        "example": 1,
+                        "nullable": true
+                    },
+                    "actif": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "ministere": {
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "LoginRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "admin@eglisehub.org"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "Password123"
+                    }
+                },
+                "type": "object"
+            },
+            "LoginResponse": {
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "token": {
+                        "description": "Token d'authentification Sanctum",
+                        "type": "string"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/User"
+                    }
+                },
+                "type": "object"
+            },
+            "RegisterRequest": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Admin"
+                    },
+                    "prenom": {
+                        "type": "string",
+                        "example": "Jean",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "admin@crc.org"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "Password123"
+                    },
+                    "password_confirmation": {
+                        "type": "string",
+                        "example": "Password123"
+                    },
+                    "ministere_nom": {
+                        "type": "string",
+                        "example": "CRC Bangui"
+                    },
+                    "ministere_type": {
+                        "type": "string",
+                        "enum": [
+                            "eglise",
+                            "ministere",
+                            "organisation",
+                            "para_ecclesial",
+                            "mission"
+                        ],
+                        "example": "eglise"
+                    },
+                    "sous_domaine": {
+                        "type": "string",
+                        "example": "crc"
+                    },
+                    "ville": {
+                        "type": "string",
+                        "example": "Bangui",
+                        "nullable": true
+                    },
+                    "pays": {
+                        "type": "string",
+                        "example": "République centrafricaine",
+                        "nullable": true
+                    },
+                    "email_contact": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "contact@crc.org",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "ChangePasswordRequest": {
+                "properties": {
+                    "ancien_mot_de_passe": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "OldPassword123"
+                    },
+                    "nouveau_mot_de_passe": {
+                        "type": "string",
+                        "format": "password",
+                        "example": "NewPassword123"
+                    },
+                    "nouveau_mot_de_passe_confirmation": {
+                        "type": "string",
+                        "example": "NewPassword123"
+                    }
+                },
+                "type": "object"
+            },
+            "Faq": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "question": {
+                        "type": "string",
+                        "example": "Quelle est la horário des cultes?"
+                    },
+                    "reponse": {
+                        "type": "string",
+                        "example": "Les cultes sont à 9h le dimanche."
+                    },
+                    "categorie": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "actif": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "ordre": {
+                        "type": "integer",
+                        "example": 0
+                    }
+                },
+                "type": "object"
+            },
+            "Slider": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "titre": {
+                        "type": "string",
+                        "example": "Bienvenue"
+                    },
+                    "sous_titre": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "type_media": {
+                        "type": "string",
+                        "enum": [
+                            "image",
+                            "video"
+                        ],
+                        "example": "image"
+                    },
+                    "image": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "bouton_texte": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "bouton_lien": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "actif": {
+                        "type": "boolean",
+                        "example": true
+                    },
+                    "ordre": {
+                        "type": "integer",
+                        "example": 0
+                    }
+                },
+                "type": "object"
+            },
+            "Don": {
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "nom_donateur": {
+                        "type": "string",
+                        "example": "Jean Dupont"
+                    },
+                    "email_donateur": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "telephone": {
+                        "type": "string",
+                        "example": "+236 74 02 67 55"
+                    },
+                    "montant": {
+                        "type": "number",
+                        "example": 5000
+                    },
+                    "type_don": {
+                        "type": "string",
+                        "enum": [
+                            "don",
+                            "dime",
+                            "offrande"
+                        ],
+                        "example": "don"
+                    },
+                    "operateur": {
+                        "type": "string",
+                        "enum": [
+                            "orange",
+                            "moov",
+                            "airtel"
+                        ],
+                        "example": "orange"
+                    },
+                    "statut": {
+                        "type": "string",
+                        "enum": [
+                            "en_attente",
+                            "confirme",
+                            "echoue"
+                        ],
+                        "example": "en_attente"
                     }
                 },
                 "type": "object"

@@ -40,14 +40,71 @@ class User extends Authenticatable
         return $this->belongsTo(Ministere::class, 'ministere_id');
     }
 
-    // Helpers pour vérifier le rôle
+    public const ROLE_SUPER_ADMIN = 'super_admin';
+    public const ROLE_ADMIN_MINISTERE = 'admin_ministere';
+    public const ROLE_CREATEUR_CONTENU = 'createur_contenu';
+    public const ROLE_MODERATEUR = 'moderateur';
+
+    public static array $ROLES = [
+        self::ROLE_SUPER_ADMIN,
+        self::ROLE_ADMIN_MINISTERE,
+        self::ROLE_CREATEUR_CONTENU,
+        self::ROLE_MODERATEUR,
+    ];
+
     public function isSuperAdmin(): bool
     {
-        return $this->role === 'super_admin';
+        return $this->role === self::ROLE_SUPER_ADMIN;
     }
 
     public function isAdminMinistere(): bool
     {
-        return $this->role === 'admin_ministere';
+        return $this->role === self::ROLE_ADMIN_MINISTERE;
+    }
+
+    public function isCreateurContenu(): bool
+    {
+        return $this->role === self::ROLE_CREATEUR_CONTENU;
+    }
+
+    public function isModerateur(): bool
+    {
+        return $this->role === self::ROLE_MODERATEUR;
+    }
+
+    public function canManageContent(): bool
+    {
+        return in_array($this->role, [
+            self::ROLE_SUPER_ADMIN,
+            self::ROLE_ADMIN_MINISTERE,
+            self::ROLE_CREATEUR_CONTENU,
+        ]);
+    }
+
+    public function canModerate(): bool
+    {
+        return in_array($this->role, [
+            self::ROLE_SUPER_ADMIN,
+            self::ROLE_ADMIN_MINISTERE,
+            self::ROLE_MODERATEUR,
+        ]);
+    }
+
+    public function canManageUsers(): bool
+    {
+        return in_array($this->role, [
+            self::ROLE_SUPER_ADMIN,
+            self::ROLE_ADMIN_MINISTERE,
+        ]);
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('actif', true);
+    }
+
+    public function scopeOfMinistere($query, int $ministereId)
+    {
+        return $query->where('ministere_id', $ministereId);
     }
 }

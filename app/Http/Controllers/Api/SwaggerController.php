@@ -165,5 +165,79 @@ namespace App\Http\Controllers\Api;
  *     @OA\Property(property="articles_count", type="integer", example=5),
  *     @OA\Property(property="pages_count", type="integer", example=2)
  * )
+ * 
+ * @OA\Schema(schema="User",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="name", type="string", example="Mologbama"),
+ *     @OA\Property(property="prenom", type="string", nullable=true, example="Abishadai"),
+ *     @OA\Property(property="email", type="string", format="email", example="admin@eglisehub.org"),
+ *     @OA\Property(property="role", type="string", enum={"super_admin","admin_ministere","createur_contenu","moderateur"}, example="super_admin"),
+ *     @OA\Property(property="ministere_id", type="integer", nullable=true, example=1),
+ *     @OA\Property(property="actif", type="boolean", example=true),
+ *     @OA\Property(property="ministere", type="object", nullable=true)
+ * )
+ * 
+ * @OA\Schema(schema="LoginRequest",
+ *     @OA\Property(property="email", type="string", format="email", example="admin@eglisehub.org"),
+ *     @OA\Property(property="password", type="string", format="password", example="Password123")
+ * )
+ * 
+ * @OA\Schema(schema="LoginResponse",
+ *     @OA\Property(property="success", type="boolean", example=true),
+ *     @OA\Property(property="token", type="string", description="Token d'authentification Sanctum"),
+ *     @OA\Property(property="user", ref="#/components/schemas/User")
+ * )
+ * 
+ * @OA\Schema(schema="RegisterRequest",
+ *     @OA\Property(property="name", type="string", example="Admin"),
+ *     @OA\Property(property="prenom", type="string", nullable=true, example="Jean"),
+ *     @OA\Property(property="email", type="string", format="email", example="admin@crc.org"),
+ *     @OA\Property(property="password", type="string", format="password", example="Password123"),
+ *     @OA\Property(property="password_confirmation", type="string", example="Password123"),
+ *     @OA\Property(property="ministere_nom", type="string", example="CRC Bangui"),
+ *     @OA\Property(property="ministere_type", type="string", enum={"eglise","ministere","organisation","para_ecclesial","mission"}, example="eglise"),
+ *     @OA\Property(property="sous_domaine", type="string", example="crc"),
+ *     @OA\Property(property="ville", type="string", nullable=true, example="Bangui"),
+ *     @OA\Property(property="pays", type="string", nullable=true, example="République centrafricaine"),
+ *     @OA\Property(property="email_contact", type="string", format="email", nullable=true, example="contact@crc.org")
+ * )
+ * 
+ * @OA\Schema(schema="ChangePasswordRequest",
+ *     @OA\Property(property="ancien_mot_de_passe", type="string", format="password", example="OldPassword123"),
+ *     @OA\Property(property="nouveau_mot_de_passe", type="string", format="password", example="NewPassword123"),
+ *     @OA\Property(property="nouveau_mot_de_passe_confirmation", type="string", example="NewPassword123")
+ * )
+ * 
+ * @OA\Schema(schema="Faq",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="question", type="string", example="Quelle est la horário des cultes?"),
+ *     @OA\Property(property="reponse", type="string", example="Les cultes sont à 9h le dimanche."),
+ *     @OA\Property(property="categorie", type="string", nullable=true),
+ *     @OA\Property(property="actif", type="boolean", example=true),
+ *     @OA\Property(property="ordre", type="integer", example=0)
+ * )
+ * 
+ * @OA\Schema(schema="Slider",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="titre", type="string", example="Bienvenue"),
+ *     @OA\Property(property="sous_titre", type="string", nullable=true),
+ *     @OA\Property(property="type_media", type="string", enum={"image","video"}, example="image"),
+ *     @OA\Property(property="image", type="string", nullable=true),
+ *     @OA\Property(property="bouton_texte", type="string", nullable=true),
+ *     @OA\Property(property="bouton_lien", type="string", nullable=true),
+ *     @OA\Property(property="actif", type="boolean", example=true),
+ *     @OA\Property(property="ordre", type="integer", example=0)
+ * )
+ * 
+ * @OA\Schema(schema="Don",
+ *     @OA\Property(property="id", type="integer", example=1),
+ *     @OA\Property(property="nom_donateur", type="string", example="Jean Dupont"),
+ *     @OA\Property(property="email_donateur", type="string", nullable=true),
+ *     @OA\Property(property="telephone", type="string", example="+236 74 02 67 55"),
+ *     @OA\Property(property="montant", type="number", example=5000),
+ *     @OA\Property(property="type_don", type="string", enum={"don","dime","offrande"}, example="don"),
+ *     @OA\Property(property="operateur", type="string", enum={"orange","moov","airtel"}, example="orange"),
+ *     @OA\Property(property="statut", type="string", enum={"en_attente","confirme","echoue"}, example="en_attente")
+ * )
  */
 class SwaggerController {}

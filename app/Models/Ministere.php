@@ -90,4 +90,9 @@ class Ministere extends Model
     {
         return $this->hasMany(Setting::class, 'ministere_id');
     }
+
+    public function dons()
+    {
+        return $this->hasMany(Don::class, 'ministere_id');
+    }
 }

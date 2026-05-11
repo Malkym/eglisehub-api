@@ -3,120 +3,39 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Http\Requests\ChangePasswordRequest;
+use App\Http\Resources\UserResource;
 use App\Models\LogAction;
+use App\Models\Ministere;
+use App\Models\User;
+use App\Traits\HasActivityLogging;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
-//use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
 
-/**
- * 
- * 
- * @OA\Schema(
- *     schema="User",
- *     @OA\Property(property="id", type="integer", example=1),
- *     @OA\Property(property="name", type="string", example="Mologbama"),
- *     @OA\Property(property="prenom", type="string", nullable=true, example="Abishadai"),
- *     @OA\Property(property="email", type="string", format="email", example="admin@eglisehub.org"),
- *     @OA\Property(property="role", type="string", enum={"super_admin", "admin_ministere", "createur_contenu", "moderateur"}, example="super_admin"),
- *     @OA\Property(property="ministere_id", type="integer", nullable=true, example=1),
- *     @OA\Property(property="actif", type="boolean", example=true),
- *     @OA\Property(property="ministere", type="object", nullable=true)
- * )
- * 
- * @OA\Schema(
- *     schema="LoginRequest",
- *     required={"email", "password"},
- *     @OA\Property(property="email", type="string", format="email", example="admin@eglisehub.org"),
- *     @OA\Property(property="password", type="string", format="password", example="Password123")
- * )
- * 
- * @OA\Schema(
- *     schema="LoginResponse",
- *     @OA\Property(property="success", type="boolean", example=true),
- *     @OA\Property(property="token", type="string", description="Token d'authentification Sanctum", example="74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe"),
- *     @OA\Property(property="user", ref="#/components/schemas/User")
- * )
- * 
- * @OA\Schema(
- *     schema="RegisterRequest",
- *     required={"name", "email", "password", "ministere_nom", "ministere_type", "sous_domaine"},
- *     @OA\Property(property="name", type="string", example="Admin"),
- *     @OA\Property(property="prenom", type="string", nullable=true, example="Jean"),
- *     @OA\Property(property="email", type="string", format="email", example="admin@crc.org"),
- *     @OA\Property(property="password", type="string", format="password", example="Password123"),
- *     @OA\Property(property="password_confirmation", type="string", example="Password123"),
- *     @OA\Property(property="ministere_nom", type="string", example="CRC Bangui"),
- *     @OA\Property(property="ministere_type", type="string", enum={"eglise","ministere","organisation","para_ecclesial","mission"}, example="eglise"),
- *     @OA\Property(property="sous_domaine", type="string", example="crc"),
- *     @OA\Property(property="ville", type="string", nullable=true, example="Bangui"),
- *     @OA\Property(property="pays", type="string", nullable=true, example="République centrafricaine"),
- *     @OA\Property(property="email_contact", type="string", format="email", nullable=true, example="contact@crc.org")
- * )
- * 
- * @OA\Schema(
- *     schema="ChangePasswordRequest",
- *     required={"ancien_mot_de_passe", "nouveau_mot_de_passe", "nouveau_mot_de_passe_confirmation"},
- *     @OA\Property(property="ancien_mot_de_passe", type="string", format="password", example="OldPassword123"),
- *     @OA\Property(property="nouveau_mot_de_passe", type="string", format="password", example="NewPassword123"),
- *     @OA\Property(property="nouveau_mot_de_passe_confirmation", type="string", format="password", example="NewPassword123")
- * )
- */
 class AuthController extends Controller
 {
+    use HasActivityLogging;
+
     private const MAX_LOGIN_ATTEMPTS = 5;
     private const LOGIN_LOCKOUT_SECONDS = 300;
 
     /**
-     * Connexion utilisateur
-     * 
      * @OA\Post(
      *     path="/login",
      *     operationId="login",
      *     tags={"Auth"},
      *     summary="Connexion utilisateur",
-     *     description="Authentifie un utilisateur et retourne un token Sanctum valide",
-     *     
+     *     description="Authentifie un utilisateur et retourne un token Sanctum",
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(ref="#/components/schemas/LoginRequest")
      *     ),
-     *     
-     *     @OA\Response(
-     *         response=200,
-     *         description="Connexion réussie",
-     *         @OA\JsonContent(ref="#/components/schemas/LoginResponse")
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=401,
-     *         description="Identifiants incorrects",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Identifiants incorrects.")
-     *         )
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation échouée",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="L'email est requis."),
-     *             @OA\Property(property="errors", type="object")
-     *         )
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=429,
-     *         description="Trop de tentatives",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Trop de tentatives de connexion. Réessayez dans 5 minute(s)."),
-     *             @OA\Property(property="retry_after", type="integer", example=300)
-     *         )
-     *     )
+     *     @OA\Response(response=200, description="Connexion réussie", @OA\JsonContent(ref="#/components/schemas/LoginResponse")),
+     *     @OA\Response(response=401, description="Identifiants incorrects"),
+     *     @OA\Response(response=422, description="Validation échouée"),
+     *     @OA\Response(response=429, description="Trop de tentatives")
      * )
      */
     public function login(Request $request)
@@ -154,17 +73,14 @@ class AuthController extends Controller
 
         $user->update(['dernier_login' => now()]);
 
-        // Garder seulement les 5 derniers tokens
         $oldTokens = $user->tokens()->orderBy('created_at', 'desc')->skip(5)->take(100)->get();
         foreach ($oldTokens as $token) {
             $token->delete();
         }
 
-        // Nom de token unique
         $tokenName = 'auth_token_' . $user->id . '_' . now()->format('Ymd_His');
         $token = $user->createToken($tokenName, ['*'], now()->addDays(7))->plainTextToken;
 
-        // Gestion du ministere_id pour super_admin
         $ministereId = $user->ministere_id;
         if ($user->role === 'super_admin') {
             $ministereId = null;
@@ -176,66 +92,19 @@ class AuthController extends Controller
         LogAction::create([
             'user_id'      => $user->id,
             'ministere_id' => $user->ministere_id,
-            'action'       => 'login',
-            'module'       => 'auth',
-            'ip'           => $request->ip(),
-            'date_action'  => now(),
+            'action'      => 'login',
+            'module'      => 'auth',
+            'ip'          => $request->ip(),
+            'date_action' => now(),
         ]);
 
         return response()->json([
             'success' => true,
             'token'   => $token,
-            'user'    => [
-                'id'           => $user->id,
-                'name'         => $user->name,
-                'prenom'       => $user->prenom,
-                'email'        => $user->email,
-                'role'         => $user->role,
-                'ministere_id' => $ministereId,
-                'actif'        => $user->actif,
-                'ministere'    => $user->role === 'super_admin' ? null : $user->ministere,
-            ],
+            'user'    => new UserResource($user),
         ]);
     }
 
-    /**
-     * Inscription nouveau ministère
-     * 
-     * @OA\Post(
-     *     path="/api/register",
-     *     operationId="register",
-     *     tags={"Auth"},
-     *     summary="Inscription nouveau ministère",
-     *     description="Crée un nouveau ministère et un compte administrateur associé",
-     *     
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(ref="#/components/schemas/RegisterRequest")
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=201,
-     *         description="Ministère créé avec succès",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Ministère créé avec succès."),
-     *             @OA\Property(property="token", type="string", example="74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe"),
-     *             @OA\Property(property="user", ref="#/components/schemas/User"),
-     *             @OA\Property(property="ministere", type="object")
-     *         )
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation échouée",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string"),
-     *             @OA\Property(property="errors", type="object")
-     *         )
-     *     )
-     * )
-     */
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -251,10 +120,10 @@ class AuthController extends Controller
             'email_contact'  => 'nullable|email|max:255',
         ]);
 
-        $ministere = \App\Models\Ministere::create([
+        $ministere = Ministere::create([
             'nom'               => $validated['ministere_nom'],
             'type'              => $validated['ministere_type'],
-            'slug'              => \Illuminate\Support\Str::slug($validated['ministere_nom']),
+            'slug'              => Str::slug($validated['ministere_nom']),
             'sous_domaine'      => strtolower($validated['sous_domaine']),
             'ville'             => $validated['ville'] ?? null,
             'pays'              => $validated['pays'] ?? 'République centrafricaine',
@@ -264,20 +133,20 @@ class AuthController extends Controller
             'statut'            => 'actif',
         ]);
 
-        $user = \App\Models\User::create([
+        $user = User::create([
             'name'         => $validated['name'],
             'prenom'       => $validated['prenom'] ?? null,
-            'email'        => $validated['email'],
-            'password'     => Hash::make($validated['password']),
-            'role'         => 'admin_ministere',
+            'email'       => $validated['email'],
+            'password'   => Hash::make($validated['password']),
+            'role'        => 'admin_ministere',
             'ministere_id' => $ministere->id,
-            'actif'        => true,
+            'actif'       => true,
         ]);
 
         $tokenName = 'auth_token_' . $user->id . '_' . now()->format('Ymd_His');
         $token = $user->createToken($tokenName, ['*'], now()->addDays(7))->plainTextToken;
 
-        $superAdmins = \App\Models\User::where('role', 'super_admin')->where('actif', true)->get();
+        $superAdmins = User::where('role', 'super_admin')->where('actif', true)->get();
         foreach ($superAdmins as $sa) {
             if (class_exists('\App\Helpers\NotifHelper')) {
                 \App\Helpers\NotifHelper::send(
@@ -291,48 +160,25 @@ class AuthController extends Controller
             }
         }
 
-        return response()->json([
+return response()->json([
             'success'   => true,
             'message'   => 'Ministère créé avec succès.',
             'token'     => $token,
-            'user'      => [
-                'id'           => $user->id,
-                'name'         => $user->name,
-                'prenom'       => $user->prenom,
-                'email'        => $user->email,
-                'role'         => $user->role,
-                'ministere_id' => $user->ministere_id,
-                'actif'        => $user->actif,
-                'ministere'    => $user->ministere,
-            ],
+            'user'      => new UserResource($user),
             'ministere' => $ministere,
         ], 201);
     }
 
     /**
-     * Déconnexion
-     * 
      * @OA\Post(
-     *     path="/api/logout",
+     *     path="/logout",
      *     operationId="logout",
      *     tags={"Auth"},
      *     summary="Déconnexion",
      *     description="Déconnecte l'utilisateur et révoque son token",
      *     security={{"bearerAuth":{}}},
-     *     
-     *     @OA\Response(
-     *         response=200,
-     *         description="Déconnexion réussie",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Déconnexion réussie.")
-     *         )
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=401,
-     *         description="Non authentifié"
-     *     )
+     *     @OA\Response(response=200, description="Déconnexion réussie"),
+     *     @OA\Response(response=401, description="Non authentifié")
      * )
      */
     public function logout(Request $request)
@@ -342,14 +188,7 @@ class AuthController extends Controller
         
         $user->tokens()->where('id', $tokenId)->delete();
 
-        LogAction::create([
-            'user_id'      => $user->id,
-            'ministere_id' => $user->ministere_id,
-            'action'       => 'logout',
-            'module'       => 'auth',
-            'ip'           => $request->ip(),
-            'date_action'  => now(),
-        ]);
+        $this->logAction($request, 'logout', 'auth', 'Déconnexion');
 
         return response()->json([
             'success' => true,
@@ -358,29 +197,15 @@ class AuthController extends Controller
     }
 
     /**
-     * Profil utilisateur actuel
-     * 
      * @OA\Get(
-     *     path="/api/me",
+     *     path="/me",
      *     operationId="me",
      *     tags={"Auth"},
      *     summary="Profil utilisateur actuel",
      *     description="Retourne les informations de l'utilisateur connecté",
      *     security={{"bearerAuth":{}}},
-     *     
-     *     @OA\Response(
-     *         response=200,
-     *         description="Profil retourné",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="user", ref="#/components/schemas/User")
-     *         )
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=401,
-     *         description="Non authentifié"
-     *     )
+     *     @OA\Response(response=200, description="Profil retourné"),
+     *     @OA\Response(response=401, description="Non authentifié")
      * )
      */
     public function me(Request $request)
@@ -396,66 +221,26 @@ class AuthController extends Controller
 
         return response()->json([
             'success' => true,
-            'user'    => [
-                'id'           => $user->id,
-                'name'         => $user->name,
-                'prenom'       => $user->prenom,
-                'email'        => $user->email,
-                'role'         => $user->role,
-                'ministere_id' => $ministereId,
-                'actif'        => $user->actif,
-                'ministere'    => $user->role === 'super_admin' ? null : $user->ministere,
-            ],
+            'user'    => new UserResource($user),
         ]);
     }
 
     /**
-     * Changer le mot de passe
-     * 
      * @OA\Post(
-     *     path="/api/change-password",
+     *     path="/change-password",
      *     operationId="changePassword",
      *     tags={"Auth"},
      *     summary="Changer le mot de passe",
      *     description="Permet à l'utilisateur de modifier son mot de passe",
      *     security={{"bearerAuth":{}}},
-     *     
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(ref="#/components/schemas/ChangePasswordRequest")
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=200,
-     *         description="Mot de passe modifié",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Mot de passe mis à jour. Autres sessions déconnectées.")
-     *         )
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation échouée ou ancien mot de passe incorrect",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Ancien mot de passe incorrect.")
-     *         )
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=401,
-     *         description="Non authentifié"
-     *     )
+     *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/ChangePasswordRequest")),
+     *     @OA\Response(response=200, description="Mot de passe modifié"),
+     *     @OA\Response(response=422, description="Ancien mot de passe incorrect"),
+     *     @OA\Response(response=401, description="Non authentifié")
      * )
      */
-    public function changePassword(Request $request)
+    public function changePassword(ChangePasswordRequest $request)
     {
-        $request->validate([
-            'ancien_mot_de_passe' => 'required|string',
-            'nouveau_mot_de_passe' => 'required|string|min:8|confirmed',
-        ]);
-
         $user = $request->user();
 
         if (!Hash::check($request->ancien_mot_de_passe, $user->password)) {
@@ -471,14 +256,7 @@ class AuthController extends Controller
 
         $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
 
-        LogAction::create([
-            'user_id'      => $user->id,
-            'ministere_id' => $user->ministere_id,
-            'action'       => 'change_password',
-            'module'       => 'auth',
-            'ip'           => $request->ip(),
-            'date_action'  => now(),
-        ]);
+        $this->logAction($request, 'change_password', 'auth', 'Mot de passe modifié');
 
         return response()->json([
             'success' => true,
@@ -487,29 +265,15 @@ class AuthController extends Controller
     }
 
     /**
-     * Rafraîchir le token
-     * 
      * @OA\Post(
-     *     path="/api/refresh-token",
+     *     path="/refresh-token",
      *     operationId="refreshToken",
      *     tags={"Auth"},
      *     summary="Rafraîchir le token",
      *     description="Génère un nouveau token pour l'utilisateur connecté",
      *     security={{"bearerAuth":{}}},
-     *     
-     *     @OA\Response(
-     *         response=200,
-     *         description="Token rafraîchi",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="token", type="string", example="74|a58e4541dfbc0e91b5b2746daf3dcafa65c22719733ad09709385c5b6536e0fe")
-     *         )
-     *     ),
-     *     
-     *     @OA\Response(
-     *         response=401,
-     *         description="Non authentifié"
-     *     )
+     *     @OA\Response(response=200, description="Token rafraîchi"),
+     *     @OA\Response(response=401, description="Non authentifié")
      * )
      */
     public function refreshToken(Request $request)
