@@ -8,43 +8,38 @@ use Illuminate\Http\Request;
 
 class LogController extends Controller
 {
-    // GET /api/admin/logs
     public function index(Request $request)
     {
         $logs = LogAction::with('user:id,name,prenom,email')
-            ->when($request->module,       fn($q) => $q->where('module', $request->module))
-            ->when($request->action,       fn($q) => $q->where('action', $request->action))
-            ->when($request->user_id,      fn($q) => $q->where('user_id', $request->user_id))
+            ->when($request->module, fn($q) => $q->where('module', $request->module))
+            ->when($request->action, fn($q) => $q->where('action', $request->action))
+            ->when($request->user_id, fn($q) => $q->where('user_id', $request->user_id))
             ->when($request->ministere_id, fn($q) => $q->where('ministere_id', $request->ministere_id))
-            ->when($request->date_debut,   fn($q) => $q->whereDate('date_action', '>=', $request->date_debut))
-            ->when($request->date_fin,     fn($q) => $q->whereDate('date_action', '<=', $request->date_fin))
-            ->when($request->search,       fn($q) => $q->where('details', 'like', "%{$request->search}%"))
+            ->when($request->date_debut, fn($q) => $q->whereDate('date_action', '>=', $request->date_debut))
+            ->when($request->date_fin, fn($q) => $q->whereDate('date_action', '<=', $request->date_fin))
+            ->when($request->search, fn($q) => $q->where('details', 'like', "%{$request->search}%"))
             ->orderBy('date_action', 'desc')
             ->paginate(30);
 
-        return response()->json(['success' => true, 'data' => $logs]);
+        return $this->respondPaginated($logs);
     }
 
-    // GET /api/admin/logs/{id}
     public function show(string $id)
     {
-        $log = LogAction::with('user:id,name,prenom,email', 'ministere:id,nom')
-                        ->findOrFail($id);
+        $log = LogAction::with('user:id,name,prenom,email', 'ministere:id,nom')->findOrFail($id);
 
-        return response()->json(['success' => true, 'data' => $log]);
+        return $this->respondSuccess($log);
     }
 
-    // GET /api/admin/logs/export
     public function export(Request $request)
     {
         $logs = LogAction::with('user:id,name,email')
             ->when($request->date_debut, fn($q) => $q->whereDate('date_action', '>=', $request->date_debut))
-            ->when($request->date_fin,   fn($q) => $q->whereDate('date_action', '<=', $request->date_fin))
-            ->when($request->module,     fn($q) => $q->where('module', $request->module))
+            ->when($request->date_fin, fn($q) => $q->whereDate('date_action', '<=', $request->date_fin))
+            ->when($request->module, fn($q) => $q->where('module', $request->module))
             ->orderBy('date_action', 'desc')
             ->get();
 
-        // Générer CSV
         $csv = "ID,Utilisateur,Email,Action,Module,Details,IP,Date\n";
         foreach ($logs as $log) {
             $nom   = $log->user ? "{$log->user->name} {$log->user->prenom}" : 'Système';
@@ -54,27 +49,19 @@ class LogController extends Controller
 
         return response($csv, 200, [
             'Content-Type'        => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="logs_'.now()->format('Y-m-d').'.csv"',
+            'Content-Disposition' => 'attachment; filename="logs_' . now()->format('Y-m-d') . '.csv"',
         ]);
     }
 
-    // POST /api/admin/logs/clean
     public function clean(Request $request)
     {
-        $request->validate([
-            'jours' => 'required|integer|min:7|max:365',
-        ]);
+        $request->validate(['jours' => 'required|integer|min:7|max:365']);
 
-        $count = LogAction::where('date_action', '<', now()->subDays($request->jours))->count();
-        LogAction::where('date_action', '<', now()->subDays($request->jours))->delete();
+        $count = LogAction::where('date_action', '<', now()->subDays($request->jours))->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => "{$count} logs supprimés (plus vieux que {$request->jours} jours).",
-        ]);
+        return $this->respondSuccess(null, "{$count} logs supprimés (plus vieux que {$request->jours} jours).");
     }
 
-    // GET /api/admin/users/{id}/activity
     public function userActivity(string $id)
     {
         $logs = LogAction::where('user_id', $id)
@@ -82,10 +69,9 @@ class LogController extends Controller
             ->orderBy('date_action', 'desc')
             ->paginate(20);
 
-        return response()->json(['success' => true, 'data' => $logs]);
+        return $this->respondPaginated($logs);
     }
 
-    // GET /api/ministry/logs — Logs du ministère (admin ministère)
     public function ministryLogs(Request $request)
     {
         $ministereId = $request->user()->isSuperAdmin() && $request->has('ministere_id')
@@ -98,6 +84,6 @@ class LogController extends Controller
             ->orderBy('date_action', 'desc')
             ->paginate(20);
 
-        return response()->json(['success' => true, 'data' => $logs]);
+        return $this->respondPaginated($logs);
     }
 }

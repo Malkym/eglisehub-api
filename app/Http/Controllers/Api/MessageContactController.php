@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Helpers\NotifHelper;
 use App\Http\Controllers\Controller;
-use App\Models\LogAction;
 use App\Models\MessageContact;
+use App\Models\MessageReponse;
 use App\Models\Ministere;
 use Illuminate\Http\Request;
 
@@ -15,7 +15,7 @@ class MessageContactController extends Controller
     {
         $ministereId = $this->getMinistereId($request);
 
-        $reponses = \App\Models\MessageReponse::with(['message', 'user'])
+        $reponses = MessageReponse::with(['message', 'user'])
             ->when($ministereId, function ($q) use ($ministereId) {
                 $q->whereHas('message', function ($sub) use ($ministereId) {
                     $sub->where('ministere_id', $ministereId);
@@ -24,99 +24,73 @@ class MessageContactController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return response()->json(['success' => true, 'data' => $reponses]);
+        return $this->respondPaginated($reponses);
     }
 
-    // GET /api/ministry/contact-messages
     public function index(Request $request)
     {
         $ministereId = $this->getMinistereId($request);
 
         $query = MessageContact::query();
 
-        // Si ministereId est null = super admin voit tout
         if ($ministereId !== null) {
             $query->where('ministere_id', $ministereId);
         }
 
         $messages = $query
             ->when($request->statut, fn($q) => $q->where('statut', $request->statut))
-            ->when(
-                $request->search,
-                fn($q) =>
+            ->when($request->search, fn($q) =>
                 $q->where('nom_expediteur', 'like', "%{$request->search}%")
                     ->orWhere('sujet', 'like', "%{$request->search}%")
             )
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return response()->json(['success' => true, 'data' => $messages]);
+        return $this->respondPaginated($messages);
     }
 
-    // GET /api/ministry/contact-messages/{id}
     public function show(Request $request, string $id)
     {
-        $message = MessageContact::with([
-            'reponses.user:id,name,prenom'
-        ])->findOrFail($id);
+        $message = MessageContact::with(['reponses.user:id,name,prenom'])->findOrFail($id);
 
-        // Auto-marquer comme lu
         if ($message->statut === 'non_lu') {
-            $message->update([
-                'statut' => 'lu',
-                'lu_le'  => now(),
-            ]);
+            $message->update(['statut' => 'lu', 'lu_le' => now()]);
         }
 
-        return response()->json(['success' => true, 'data' => $message]);
+        return $this->respondSuccess($message);
     }
 
-    // PATCH /api/ministry/contact-messages/{id}/read
     public function markRead(Request $request, string $id)
     {
-        $message = $this->findForUser($request, $id);
+        $message = $this->findForMinistere($request, MessageContact::class, $id);
         $message->update(['statut' => 'lu', 'lu_le' => now()]);
 
-        return response()->json(['success' => true, 'message' => 'Message marqué comme lu.']);
+        return $this->respondSuccess(null, 'Message marqué comme lu.');
     }
 
-    // PATCH /api/ministry/contact-messages/{id}/unread
     public function markUnread(Request $request, string $id)
     {
-        $message = $this->findForUser($request, $id);
+        $message = $this->findForMinistere($request, MessageContact::class, $id);
         $message->update(['statut' => 'non_lu', 'lu_le' => null]);
 
-        return response()->json(['success' => true, 'message' => 'Message marqué comme non lu.']);
+        return $this->respondSuccess(null, 'Message marqué comme non lu.');
     }
 
-    // PATCH /api/ministry/contact-messages/{id}/reply
     public function reply(Request $request, string $id)
     {
-        $request->validate([
-            'reponse' => 'required|string|min:1',
+        $request->validate(['reponse' => 'required|string|min:1']);
+
+        $message = $this->findForMinistere($request, MessageContact::class, $id);
+
+        $reponse = MessageReponse::create([
+            'message_id' => $message->id,
+            'user_id'    => $request->user()->id,
+            'contenu'    => $request->reponse,
         ]);
 
-        $message = MessageContact::findOrFail($id);
-
-        // Vérifier ownership
-        if (! $request->user()->isSuperAdmin()) {
-            if ($message->ministere_id !== $request->user()->ministere_id) {
-                return response()->json(['success' => false, 'message' => 'Accès refusé.'], 403);
-            }
-        }
-
-        // Sauvegarder la réponse dans messages_reponses
-        $reponse = \App\Models\MessageReponse::create([
-            'message_id'  => $message->id,
-            'user_id'     => $request->user()->id,
-            'contenu'     => $request->reponse,
-        ]);
-
-        // Mettre à jour le statut du message
         $message->update(['statut' => 'repondu']);
 
-        // Marquer comme lu aussi
-        if (! $message->lu_le) {
+        if (!$message->lu_le) {
             $message->update(['lu_le' => now()]);
         }
 
@@ -129,33 +103,22 @@ class MessageContactController extends Controller
             'messages'
         );
 
-        $this->log(
-            $request,
-            'reply_message',
-            'messages',
-            "Réponse au message #{$message->id} de {$message->nom_expediteur}"
-        );
+        $this->log($request, 'reply_message', 'messages', "Réponse au message #{$message->id} de {$message->nom_expediteur}");
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Réponse enregistrée.',
-            'data'    => $reponse,
-        ]);
+        return $this->respondSuccess($reponse, 'Réponse enregistrée.');
     }
 
-    // DELETE /api/ministry/contact-messages/{id}
     public function destroy(Request $request, string $id)
     {
-        $message = $this->findForUser($request, $id);
+        $message = $this->findForMinistere($request, MessageContact::class, $id);
         $nom = $message->nom_expediteur;
         $message->delete();
 
         $this->log($request, 'delete_message', 'messages', "Suppression message de: {$nom}");
 
-        return response()->json(['success' => true, 'message' => 'Message supprimé.']);
+        return $this->respondSuccess(null, 'Message supprimé.');
     }
 
-    // POST /api/public/contact — formulaire public
     public function publicStore(Request $request)
     {
         $request->validate([
@@ -181,27 +144,9 @@ class MessageContactController extends Controller
             'statut'         => 'non_lu',
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Message envoyé. Nous vous répondrons bientôt.',
-        ], 201);
+        return $this->respondSuccess(null, 'Message envoyé. Nous vous répondrons bientôt.', 201);
     }
 
-    // Helpers
-    private function findForUser(Request $request, string $id): MessageContact
-    {
-        $message = MessageContact::findOrFail($id);
-
-        if (! $request->user()->isSuperAdmin()) {
-            if ($message->ministere_id !== $request->user()->ministere_id) {
-                abort(403, 'Accès refusé.');
-            }
-        }
-
-        return $message;
-    }
-
-    // POST /api/public/contact — Route publique
     public function store(Request $request)
     {
         $request->validate([
@@ -212,21 +157,7 @@ class MessageContactController extends Controller
             'telephone'      => 'nullable|string|max:20',
         ]);
 
-        // Trouver le ministère via subdomain
-        $subdomain = $request->query('subdomain')
-            ?? $request->input('subdomain')
-            ?? 'crc';
-
-        $ministere = Ministere::where('sous_domaine', $subdomain)
-            ->where('statut', 'actif')
-            ->first();
-
-        if (!$ministere) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ministère introuvable.',
-            ], 404);
-        }
+        $ministere = $this->resolveMinistereFromSubdomain($request);
 
         $message = MessageContact::create([
             'ministere_id'   => $ministere->id,
@@ -238,7 +169,6 @@ class MessageContactController extends Controller
             'statut'         => 'non_lu',
         ]);
 
-        // NOTIFICATION EN TEMPS RÉEL
         NotifHelper::notifyMinistryAdmins(
             $ministere->id,
             'Nouveau message de ' . $request->nom_expediteur,
@@ -248,7 +178,6 @@ class MessageContactController extends Controller
             'messages'
         );
 
-        // Optionnel : Notifier les super admins aussi
         NotifHelper::notifySuperAdmins(
             'Nouveau message - ' . $ministere->nom,
             $request->nom_expediteur . ' a envoyé un message',
@@ -257,10 +186,6 @@ class MessageContactController extends Controller
             'messages'
         );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Message envoyé avec succès.',
-            'data'    => ['id' => $message->id],
-        ]);
+        return $this->respondSuccess(['id' => $message->id], 'Message envoyé avec succès.');
     }
 }

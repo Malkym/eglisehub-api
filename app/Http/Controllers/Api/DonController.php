@@ -3,18 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Don;
 use App\Models\Ministere;
 use Illuminate\Http\Request;
 
 class DonController extends Controller
 {
-
     /**
      * @OA\Post(
      *     path="/public/dons",
      *     tags={"Public"},
      *     summary="Faire un don en ligne",
-     *     description="Enregistre une demande de don via Mobile Money (Orange, Moov, Airtel)",
+     *     description="Enregistre un don via Mobile Money (Orange, Moov, Airtel)",
      *     @OA\RequestBody(
      *         required=true,
      *         @OA\JsonContent(
@@ -52,36 +52,35 @@ class DonController extends Controller
      *     )
      * )
      */
-
-
-    // POST /api/public/dons
     public function store(Request $request)
     {
         $request->validate([
-            'subdomain'    => 'required|string',
-            'nom'          => 'required|string|max:255',
-            'telephone'    => 'required|string|max:20',
-            'montant'      => 'required|numeric|min:100',
-            'type_don'     => 'required|in:don,dime,offrande',
-            'operateur'    => 'required|in:orange,moov,airtel',
+            'subdomain' => 'required|string',
+            'nom'       => 'required|string|max:255',
+            'telephone' => 'required|string|max:20',
+            'montant'   => 'required|numeric|min:100',
+            'type_don'  => 'required|in:don,dime,offrande',
+            'operateur' => 'required|in:orange,moov,airtel',
         ]);
 
         $ministere = Ministere::where('sous_domaine', $request->subdomain)
             ->where('statut', 'actif')
-            ->firstOrFail();
+            ->first();
 
-        // Ici on pourrait intégrer l'API Orange Money
-        // Pour l'instant on enregistre la demande
-        $don = \App\Models\MessageContact::create([
-            'ministere_id'    => $ministere->id,
-            'nom_expediteur'  => $request->nom,
-            'email'           => $request->telephone . '@don.local',
-            'sujet'           => "DON - {$request->type_don} - {$request->montant} FCFA via {$request->operateur}",
-            'message'         => "Demande de don:\nNom: {$request->nom}\nTéléphone: {$request->telephone}\nMontant: {$request->montant} FCFA\nType: {$request->type_don}\nOpérateur: {$request->operateur}",
-            'statut'          => 'non_lu',
+        if (!$ministere) {
+            return $this->respondWithError('Ministère introuvable.', 404);
+        }
+
+        $don = Don::create([
+            'ministere_id'   => $ministere->id,
+            'nom_donateur'   => $request->nom,
+            'telephone'      => $request->telephone,
+            'montant'        => $request->montant,
+            'type_don'       => $request->type_don,
+            'operateur'      => $request->operateur,
+            'statut'         => 'en_attente',
         ]);
 
-        // Notification à l'admin
         $admins = $ministere->utilisateurs()->get();
         foreach ($admins as $admin) {
             \App\Helpers\NotifHelper::send(
@@ -94,9 +93,9 @@ class DonController extends Controller
             );
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Demande de don enregistrée. Vous allez recevoir un appel de confirmation.',
-        ]);
+        return $this->respondSuccess(
+            ['id' => $don->id],
+            'Demande de don enregistrée. Vous allez recevoir un appel de confirmation.'
+        );
     }
 }

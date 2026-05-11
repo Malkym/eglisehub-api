@@ -4,12 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Faq;
-use App\Models\LogAction;
 use Illuminate\Http\Request;
 
 class FaqController extends Controller
 {
-    // GET /api/ministry/faq
     public function index(Request $request)
     {
         $ministereId = $this->getMinistereId($request);
@@ -21,10 +19,9 @@ class FaqController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        return response()->json(['success' => true, 'data' => $faqs]);
+        return $this->respondSuccess($faqs);
     }
 
-    // POST /api/ministry/faq
     public function store(Request $request)
     {
         $request->validate([
@@ -48,24 +45,18 @@ class FaqController extends Controller
 
         $this->log($request, 'create_faq', 'faq', "Création FAQ: {$faq->question}");
 
-        return response()->json([
-            'success' => true,
-            'message' => 'FAQ créée.',
-            'data'    => $faq,
-        ], 201);
+        return $this->respondSuccess($faq, 'FAQ créée.', 201);
     }
 
-    // GET /api/ministry/faq/{id}
     public function show(Request $request, string $id)
     {
-        $faq = $this->findForUser($request, $id);
-        return response()->json(['success' => true, 'data' => $faq]);
+        $faq = $this->findForMinistere($request, Faq::class, $id);
+        return $this->respondSuccess($faq);
     }
 
-    // PUT /api/ministry/faq/{id}
     public function update(Request $request, string $id)
     {
-        $faq = $this->findForUser($request, $id);
+        $faq = $this->findForMinistere($request, Faq::class, $id);
 
         $request->validate([
             'question'  => 'sometimes|string|max:500',
@@ -79,40 +70,29 @@ class FaqController extends Controller
 
         $this->log($request, 'update_faq', 'faq', "Modification FAQ: {$faq->question}");
 
-        return response()->json([
-            'success' => true,
-            'message' => 'FAQ mise à jour.',
-            'data'    => $faq->fresh(),
-        ]);
+        return $this->respondSuccess($faq->fresh(), 'FAQ mise à jour.');
     }
 
-    // DELETE /api/ministry/faq/{id}
     public function destroy(Request $request, string $id)
     {
-        $faq = $this->findForUser($request, $id);
+        $faq = $this->findForMinistere($request, Faq::class, $id);
         $question = $faq->question;
         $faq->delete();
 
         $this->log($request, 'delete_faq', 'faq', "Suppression FAQ: {$question}");
 
-        return response()->json(['success' => true, 'message' => 'FAQ supprimée.']);
+        return $this->respondSuccess(null, 'FAQ supprimée.');
     }
 
-    // PATCH /api/ministry/faq/{id}/toggle
     public function toggle(Request $request, string $id)
     {
-        $faq = $this->findForUser($request, $id);
-        $faq->update(['actif' => ! $faq->actif]);
+        $faq = $this->findForMinistere($request, Faq::class, $id);
+        $faq->update(['actif' => !$faq->actif]);
         $etat = $faq->fresh()->actif ? 'activée' : 'désactivée';
 
-        return response()->json([
-            'success' => true,
-            'message' => "FAQ {$etat}.",
-            'data'    => $faq->fresh(),
-        ]);
+        return $this->respondSuccess($faq->fresh(), "FAQ {$etat}.");
     }
 
-    // POST /api/ministry/faq/reorder
     public function reorder(Request $request)
     {
         $request->validate([
@@ -125,33 +105,21 @@ class FaqController extends Controller
             Faq::where('id', $item['id'])->update(['ordre' => $item['ordre']]);
         }
 
-        return response()->json(['success' => true, 'message' => 'Ordre des FAQs mis à jour.']);
+        return $this->respondSuccess(null, 'Ordre des FAQs mis à jour.');
     }
 
-    // GET /api/public/faq — Route publique
     public function publicIndex(Request $request)
     {
-        $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
+        $subdomain = $this->resolveSubdomain($request);
 
         $faqs = Faq::whereHas('ministere', fn($q) =>
-                        $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
-                    )
-                    ->where('actif', true)
-                    ->when($request->categorie, fn($q) => $q->where('categorie', $request->categorie))
-                    ->orderBy('ordre')
-                    ->get(['id', 'question', 'reponse', 'categorie']);
+                $q->where('sous_domaine', $subdomain)->where('statut', 'actif')
+            )
+            ->where('actif', true)
+            ->when($request->categorie, fn($q) => $q->where('categorie', $request->categorie))
+            ->orderBy('ordre')
+            ->get(['id', 'question', 'reponse', 'categorie']);
 
-        return response()->json(['success' => true, 'data' => $faqs]);
-    }
-
-    private function findForUser(Request $request, string $id): Faq
-    {
-        $faq = Faq::findOrFail($id);
-        if (! $request->user()->isSuperAdmin()) {
-            if ($faq->ministere_id !== $request->user()->ministere_id) {
-                abort(403, 'Accès refusé.');
-            }
-        }
-        return $faq;
+        return $this->respondSuccess($faqs);
     }
 }

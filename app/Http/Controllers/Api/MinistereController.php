@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ministere;
-use App\Models\LogAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -23,13 +22,10 @@ class MinistereController extends Controller
      *     @OA\Parameter(name="page",   in="query", @OA\Schema(type="integer")),
      *     @OA\Response(response=200, description="Liste paginée",
      *         @OA\JsonContent(ref="#/components/schemas/Paginated")
-
      *     ),
      *     @OA\Response(response=403, description="Accès refusé — Super Admin uniquement")
      * )
      */
-
-    // GET /api/admin/ministeres
     public function index(Request $request)
     {
         $query = Ministere::withCount(['pages', 'articles', 'evenements', 'utilisateurs']);
@@ -46,12 +42,7 @@ class MinistereController extends Controller
             $query->where('nom', 'like', '%' . $request->search . '%');
         }
 
-        $ministeres = $query->orderBy('created_at', 'desc')->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data'    => $ministeres,
-        ]);
+        return $this->respondPaginated($query->orderBy('created_at', 'desc')->paginate(15));
     }
 
     /**
@@ -85,53 +76,47 @@ class MinistereController extends Controller
      *     @OA\Response(response=403, description="Accès refusé")
      * )
      */
-
-    // POST /api/admin/ministeres
     public function store(Request $request)
     {
         $request->validate([
-            'nom'          => 'required|string|max:255',
-            'type'         => 'required|in:eglise,ministere,organisation,para_ecclesial,mission',
-            'sous_domaine' => 'required|string|max:100|unique:ministeres,sous_domaine|alpha_dash',
-            'description'  => 'nullable|string',
+            'nom'                => 'required|string|max:255',
+            'type'               => 'required|in:eglise,ministere,organisation,para_ecclesial,mission',
+            'sous_domaine'       => 'required|string|max:100|unique:ministeres,sous_domaine|alpha_dash',
+            'description'        => 'nullable|string',
             'couleur_primaire'   => 'nullable|string|max:7',
             'couleur_secondaire' => 'nullable|string|max:7',
-            'email_contact' => 'nullable|email',
-            'telephone'    => 'nullable|string|max:20',
-            'adresse'      => 'nullable|string',
-            'ville'        => 'nullable|string|max:100',
-            'pays'         => 'nullable|string|max:100',
-            'facebook_url' => 'nullable|url',
-            'youtube_url'  => 'nullable|url',
-            'whatsapp'     => 'nullable|string|max:20',
+            'email_contact'      => 'nullable|email',
+            'telephone'          => 'nullable|string|max:20',
+            'adresse'            => 'nullable|string',
+            'ville'              => 'nullable|string|max:100',
+            'pays'               => 'nullable|string|max:100',
+            'facebook_url'       => 'nullable|url',
+            'youtube_url'        => 'nullable|url',
+            'whatsapp'           => 'nullable|string|max:20',
         ]);
 
         $ministere = Ministere::create([
-            'nom'               => $request->nom,
-            'type'              => $request->type,
-            'slug'              => Str::slug($request->nom),
-            'sous_domaine'      => strtolower($request->sous_domaine),
-            'description'       => $request->description,
-            'couleur_primaire'  => $request->couleur_primaire ?? '#1E3A8A',
+            'nom'                => $request->nom,
+            'type'               => $request->type,
+            'slug'               => Str::slug($request->nom),
+            'sous_domaine'       => strtolower($request->sous_domaine),
+            'description'        => $request->description,
+            'couleur_primaire'   => $request->couleur_primaire ?? '#1E3A8A',
             'couleur_secondaire' => $request->couleur_secondaire ?? '#FFFFFF',
-            'email_contact'     => $request->email_contact,
-            'telephone'         => $request->telephone,
-            'adresse'           => $request->adresse,
-            'ville'             => $request->ville,
-            'pays'              => $request->pays ?? 'République centrafricaine',
-            'facebook_url'      => $request->facebook_url,
-            'youtube_url'       => $request->youtube_url,
-            'whatsapp'          => $request->whatsapp,
-            'statut'            => 'actif',
+            'email_contact'      => $request->email_contact,
+            'telephone'          => $request->telephone,
+            'adresse'            => $request->adresse,
+            'ville'              => $request->ville,
+            'pays'               => $request->pays ?? 'République centrafricaine',
+            'facebook_url'       => $request->facebook_url,
+            'youtube_url'        => $request->youtube_url,
+            'whatsapp'           => $request->whatsapp,
+            'statut'             => 'actif',
         ]);
 
         $this->log($request, 'create_ministere', 'ministeres', "Création: {$ministere->nom}");
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ministère créé avec succès.',
-            'data'    => $ministere,
-        ], 201);
+        return $this->respondSuccess($ministere, 'Ministère créé avec succès.', 201);
     }
 
     /**
@@ -150,17 +135,12 @@ class MinistereController extends Controller
      *     @OA\Response(response=404, description="Non trouvé")
      * )
      */
-
-    // GET /api/admin/ministeres/{id}
     public function show(string $id)
     {
         $ministere = Ministere::withCount(['pages', 'articles', 'evenements', 'utilisateurs'])
             ->findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'data'    => $ministere,
-        ]);
+        return $this->respondSuccess($ministere);
     }
 
     /**
@@ -182,28 +162,26 @@ class MinistereController extends Controller
      *     @OA\Response(response=404, description="Non trouvé")
      * )
      */
-
-    // PUT /api/admin/ministeres/{id}
     public function update(Request $request, string $id)
     {
         $ministere = Ministere::findOrFail($id);
 
         $request->validate([
-            'nom'          => 'sometimes|string|max:255',
-            'type'         => 'sometimes|in:eglise,ministere,organisation,para_ecclesial,mission',
-            'sous_domaine' => "sometimes|string|max:100|alpha_dash|unique:ministeres,sous_domaine,{$id}",
-            'description'  => 'nullable|string',
+            'nom'                => 'sometimes|string|max:255',
+            'type'               => 'sometimes|in:eglise,ministere,organisation,para_ecclesial,mission',
+            'sous_domaine'       => "sometimes|string|max:100|alpha_dash|unique:ministeres,sous_domaine,{$id}",
+            'description'        => 'nullable|string',
             'couleur_primaire'   => 'nullable|string|max:7',
             'couleur_secondaire' => 'nullable|string|max:7',
-            'email_contact' => 'nullable|email',
-            'telephone'    => 'nullable|string|max:20',
-            'adresse'      => 'nullable|string',
-            'ville'        => 'nullable|string|max:100',
-            'pays'         => 'nullable|string|max:100',
-            'facebook_url' => 'nullable|url',
-            'youtube_url'  => 'nullable|url',
-            'whatsapp'     => 'nullable|string|max:20',
-            'statut'       => 'nullable|in:actif,inactif,suspendu',
+            'email_contact'      => 'nullable|email',
+            'telephone'          => 'nullable|string|max:20',
+            'adresse'            => 'nullable|string',
+            'ville'              => 'nullable|string|max:100',
+            'pays'               => 'nullable|string|max:100',
+            'facebook_url'       => 'nullable|url',
+            'youtube_url'        => 'nullable|url',
+            'whatsapp'           => 'nullable|string|max:20',
+            'statut'             => 'nullable|in:actif,inactif,suspendu',
         ]);
 
         if ($request->has('nom')) {
@@ -211,31 +189,15 @@ class MinistereController extends Controller
         }
 
         $ministere->update($request->only([
-            'nom',
-            'type',
-            'slug',
-            'sous_domaine',
-            'description',
-            'couleur_primaire',
-            'couleur_secondaire',
-            'email_contact',
-            'telephone',
-            'adresse',
-            'ville',
-            'pays',
-            'facebook_url',
-            'youtube_url',
-            'whatsapp',
-            'statut',
+            'nom', 'type', 'slug', 'sous_domaine', 'description',
+            'couleur_primaire', 'couleur_secondaire', 'email_contact',
+            'telephone', 'adresse', 'ville', 'pays', 'facebook_url',
+            'youtube_url', 'whatsapp', 'statut',
         ]));
 
         $this->log($request, 'update_ministere', 'ministeres', "Modification: {$ministere->nom}");
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ministère mis à jour.',
-            'data'    => $ministere->fresh(),
-        ]);
+        return $this->respondSuccess($ministere->fresh(), 'Ministère mis à jour.');
     }
 
     /**
@@ -249,8 +211,6 @@ class MinistereController extends Controller
      *     @OA\Response(response=404, description="Non trouvé")
      * )
      */
-
-    // DELETE /api/admin/ministeres/{id}
     public function destroy(Request $request, string $id)
     {
         $ministere = Ministere::findOrFail($id);
@@ -258,10 +218,7 @@ class MinistereController extends Controller
 
         $this->log($request, 'delete_ministere', 'ministeres', "Désactivation: {$ministere->nom}");
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ministère désactivé.',
-        ]);
+        return $this->respondSuccess(null, 'Ministère désactivé.');
     }
 
     /**
@@ -280,8 +237,6 @@ class MinistereController extends Controller
      *     )
      * )
      */
-
-    // PATCH /api/admin/ministeres/{id}/toggle
     public function toggle(Request $request, string $id)
     {
         $ministere = Ministere::findOrFail($id);
@@ -291,11 +246,7 @@ class MinistereController extends Controller
 
         $this->log($request, 'toggle_ministere', 'ministeres', "Toggle: {$ministere->nom} → {$nouveauStatut}");
 
-        return response()->json([
-            'success' => true,
-            'message' => "Ministère {$nouveauStatut}.",
-            'data'    => $ministere->fresh(),
-        ]);
+        return $this->respondSuccess($ministere->fresh(), "Ministère {$nouveauStatut}.");
     }
 
     /**
@@ -313,8 +264,6 @@ class MinistereController extends Controller
      *     )
      * )
      */
-
-    // GET /api/admin/ministeres/{id}/stats
     public function stats(string $id)
     {
         $ministere = Ministere::findOrFail($id);
@@ -324,17 +273,17 @@ class MinistereController extends Controller
             'type'        => $ministere->type,
             'statut'      => $ministere->statut,
             'pages'       => [
-                'total'    => $ministere->pages()->count(),
-                'publies'  => $ministere->pages()->where('statut', 'publie')->count(),
+                'total'      => $ministere->pages()->count(),
+                'publies'    => $ministere->pages()->where('statut', 'publie')->count(),
                 'brouillons' => $ministere->pages()->where('statut', 'brouillon')->count(),
             ],
             'articles'    => [
-                'total'          => $ministere->articles()->count(),
-                'publies'        => $ministere->articles()->where('statut', 'publie')->count(),
-                'brouillons'     => $ministere->articles()->where('statut', 'brouillon')->count(),
-                'vues_totales'   => $ministere->articles()->sum('vues'),
-                'en_avant'       => $ministere->articles()->where('en_avant', true)->count(),
-                'par_type'       => $ministere->articles()
+                'total'        => $ministere->articles()->count(),
+                'publies'      => $ministere->articles()->where('statut', 'publie')->count(),
+                'brouillons'   => $ministere->articles()->where('statut', 'brouillon')->count(),
+                'vues_totales' => $ministere->articles()->sum('vues'),
+                'en_avant'     => $ministere->articles()->where('en_avant', true)->count(),
+                'par_type'     => $ministere->articles()
                     ->selectRaw('type_contenu, count(*) as total')
                     ->groupBy('type_contenu')
                     ->pluck('total', 'type_contenu'),
@@ -353,10 +302,7 @@ class MinistereController extends Controller
             ],
         ];
 
-        return response()->json([
-            'success' => true,
-            'data'    => $stats,
-        ]);
+        return $this->respondSuccess($stats);
     }
 
     /**
@@ -377,28 +323,10 @@ class MinistereController extends Controller
      *     @OA\Response(response=404, description="Ministère non trouvé ou inactif")
      * )
      */
-
-    // GET /api/public/ministere
     public function getBySubdomain(Request $request)
     {
-        $sousdomaine = $request->header('X-Subdomain')
-            ?? $request->query('subdomain')
-            ?? 'crc';
+        $ministere = $this->resolveMinistereFromSubdomain($request);
 
-        $ministere = Ministere::where('sous_domaine', $sousdomaine)
-            ->where('statut', 'actif')
-            ->first();
-
-        if (! $ministere) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ministère non trouvé.',
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'data'    => $ministere,
-        ]);
+        return $this->respondSuccess($ministere);
     }
 }

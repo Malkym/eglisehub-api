@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Media;
-use App\Models\LogAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -17,7 +16,6 @@ class MediaController extends Controller
     private const ALLOWED_DOCUMENT_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
     private const MAX_FILE_SIZE = 51200;
 
-    // GET /api/ministry/media
     public function index(Request $request)
     {
         $ministereId = $this->getMinistereId($request);
@@ -29,10 +27,9 @@ class MediaController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return response()->json(['success' => true, 'data' => $medias]);
+        return $this->respondPaginated($medias);
     }
 
-    // POST /api/ministry/media/upload
     public function upload(Request $request)
     {
         $validated = $request->validate([
@@ -49,20 +46,17 @@ class MediaController extends Controller
         $mime = $fichier->getMimeType();
 
         $type = $this->determineFileType($mime, $extension);
-        
+
         if (!$this->isAllowedExtension($extension, $type)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Extension de fichier non autorisée: .' . $extension,
-            ], 422);
+            return $this->respondWithError('Extension de fichier non autorisée: .' . $extension, 422);
         }
 
         $fileSize = $fichier->getSize();
         if ($fileSize > self::MAX_FILE_SIZE * 1024) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Le fichier dépasse la taille maximale autorisée de ' . (self::MAX_FILE_SIZE / 1024) . ' Mo.',
-            ], 422);
+            return $this->respondWithError(
+                'Le fichier dépasse la taille maximale autorisée de ' . (self::MAX_FILE_SIZE / 1024) . ' Mo.',
+                422
+            );
         }
 
         $nomFichier = Str::uuid() . '.' . $extension;
@@ -70,65 +64,51 @@ class MediaController extends Controller
         $chemin = $fichier->storeAs($dossier, $nomFichier, 'public');
 
         if (!$chemin) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du stockage du fichier',
-            ], 500);
+            return $this->respondWithError('Erreur lors du stockage du fichier', 500);
         }
 
         $url = Storage::url($chemin);
 
         $media = Media::create([
-            'ministere_id'  => $ministereId,
+            'ministere_id' => $ministereId,
             'nom_original' => $fichier->getClientOriginalName(),
             'nom_fichier'  => $nomFichier,
-            'chemin'     => $chemin,
-            'url'        => $url,
-            'type'       => $type,
-            'mime_type' => $mime,
-            'taille'    => $fileSize,
-            'categorie' => $validated['categorie'] ?? null,
-            'alt_text'  => $validated['alt_text'] ?? null,
-            'visible'  => $validated['visible'] ?? true,
+            'chemin'       => $chemin,
+            'url'          => $url,
+            'type'         => $type,
+            'mime_type'    => $mime,
+            'taille'       => $fileSize,
+            'categorie'    => $validated['categorie'] ?? null,
+            'alt_text'     => $validated['alt_text'] ?? null,
+            'visible'      => $validated['visible'] ?? true,
         ]);
 
         $this->log($request, 'upload_media', 'medias', "Upload: {$media->nom_original}");
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Fichier uploadé avec succès.',
-            'data'   => $media,
-        ], 201);
+        return $this->respondSuccess($media, 'Fichier uploadé avec succès.', 201);
     }
 
-    // PATCH /api/ministry/media/{id}/toggle-visibility
     public function toggleVisibility(Request $request, string $id)
     {
-        $media = $this->findForUser($request, $id);
-        
+        $media = $this->findForMinistere($request, Media::class, $id);
+
         $media->update(['visible' => !$media->visible]);
-        
+
         $status = $media->fresh()->visible ? 'visible' : 'masqué';
 
-        return response()->json([
-            'success' => true,
-            'message' => "Le média est maintenant {$status}.",
-            'data'   => $media->fresh(),
-        ]);
+        return $this->respondSuccess($media->fresh(), "Le média est maintenant {$status}.");
     }
 
-    // GET /api/ministry/media/{id}
     public function show(Request $request, string $id)
     {
-        $media = $this->findForUser($request, $id);
-        
-        return response()->json(['success' => true, 'data' => $media]);
+        $media = $this->findForMinistere($request, Media::class, $id);
+
+        return $this->respondSuccess($media);
     }
 
-    // PUT /api/ministry/media/{id}
     public function update(Request $request, string $id)
     {
-        $media = $this->findForUser($request, $id);
+        $media = $this->findForMinistere($request, Media::class, $id);
 
         $validated = $request->validate([
             'alt_text'  => 'nullable|string|max:255',
@@ -138,17 +118,12 @@ class MediaController extends Controller
 
         $media->update($validated);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Média mis à jour.',
-            'data'   => $media->fresh(),
-        ]);
+        return $this->respondSuccess($media->fresh(), 'Média mis à jour.');
     }
 
-    // DELETE /api/ministry/media/{id}
     public function destroy(Request $request, string $id)
     {
-        $media = $this->findForUser($request, $id);
+        $media = $this->findForMinistere($request, Media::class, $id);
 
         if (Storage::disk('public')->exists($media->chemin)) {
             Storage::disk('public')->delete($media->chemin);
@@ -159,10 +134,9 @@ class MediaController extends Controller
 
         $this->log($request, 'delete_media', 'medias', "Suppression: {$nom}");
 
-        return response()->json(['success' => true, 'message' => 'Média supprimé.']);
+        return $this->respondSuccess(null, 'Média supprimé.');
     }
 
-    // POST /api/ministry/media/bulk-delete
     public function bulkDelete(Request $request)
     {
         $validated = $request->validate([
@@ -183,16 +157,12 @@ class MediaController extends Controller
             $media->delete();
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => "{$medias->count()} médias supprimés.",
-        ]);
+        return $this->respondSuccess(null, "{$medias->count()} médias supprimés.");
     }
 
-    // GET /api/public/gallery
     public function publicGallery(Request $request)
     {
-        $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
+        $subdomain = $this->resolveSubdomain($request);
 
         $medias = Media::whereHas(
             'ministere',
@@ -202,13 +172,12 @@ class MediaController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(24);
 
-        return response()->json(['success' => true, 'data' => $medias]);
+        return $this->respondPaginated($medias);
     }
 
-    // GET /api/public/media
     public function publicIndex(Request $request)
     {
-        $subdomain = $request->header('X-Subdomain') ?? $request->query('subdomain') ?? 'crc';
+        $subdomain = $this->resolveSubdomain($request);
 
         $medias = Media::whereHas(
             'ministere',
@@ -220,46 +189,27 @@ class MediaController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(20);
 
-        return response()->json(['success' => true, 'data' => $medias]);
+        return $this->respondPaginated($medias);
     }
 
     private function determineFileType(string $mime, string $extension): string
     {
-        if (str_starts_with($mime, 'image/')) {
-            return 'image';
-        }
-        if (str_starts_with($mime, 'video/')) {
-            return 'video';
-        }
-        if (str_starts_with($mime, 'audio/')) {
-            return 'audio';
-        }
+        if (str_starts_with($mime, 'image/')) return 'image';
+        if (str_starts_with($mime, 'video/')) return 'video';
+        if (str_starts_with($mime, 'audio/')) return 'audio';
         return 'document';
     }
 
     private function isAllowedExtension(string $extension, string $type): bool
     {
         $allowed = match ($type) {
-            'image' => self::ALLOWED_IMAGE_EXTENSIONS,
-            'video' => self::ALLOWED_VIDEO_EXTENSIONS,
-            'audio' => self::ALLOWED_AUDIO_EXTENSIONS,
+            'image'    => self::ALLOWED_IMAGE_EXTENSIONS,
+            'video'    => self::ALLOWED_VIDEO_EXTENSIONS,
+            'audio'    => self::ALLOWED_AUDIO_EXTENSIONS,
             'document' => self::ALLOWED_DOCUMENT_EXTENSIONS,
-            default => false,
+            default    => false,
         };
 
         return in_array($extension, $allowed);
-    }
-
-    private function findForUser(Request $request, string $id): Media
-    {
-        $media = Media::findOrFail($id);
-
-        if (!$request->user()->isSuperAdmin()) {
-            if ($media->ministere_id !== $request->user()->ministere_id) {
-                abort(403, 'Accès refusé.');
-            }
-        }
-
-        return $media;
     }
 }

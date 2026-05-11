@@ -152,12 +152,12 @@ Le système charge ensuite les données associées à ce ministère.
 ## Technologies utilisées
 
 ### Backend
-- Node.js
-- Express.js
-- MySQL ou PostgreSQL
-- JWT Authentication
-- bcrypt
-- Swagger
+- PHP 8.2
+- Laravel 12
+- SQLite (dev) / MySQL (production)
+- Sanctum Token Authentication
+- API Resources
+- l5-swagger (OpenAPI 3.0)
 
 ### Frontend
 - Vue.js

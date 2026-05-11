@@ -8,7 +8,6 @@ use App\Http\Resources\UserResource;
 use App\Models\LogAction;
 use App\Models\Ministere;
 use App\Models\User;
-use App\Traits\HasActivityLogging;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -16,8 +15,6 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    use HasActivityLogging;
-
     private const MAX_LOGIN_ATTEMPTS = 5;
     private const LOGIN_LOCKOUT_SECONDS = 300;
 
@@ -41,14 +38,13 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $rateLimitKey = 'login:' . $request->ip();
-        
+
         if (RateLimiter::tooManyAttempts($rateLimitKey, self::MAX_LOGIN_ATTEMPTS)) {
             $seconds = RateLimiter::availableIn($rateLimitKey);
-            return response()->json([
-                'success' => false,
-                'message' => 'Trop de tentatives de connexion. Réessayez dans ' . ceil($seconds / 60) . ' minute(s).',
-                'retry_after' => $seconds,
-            ], 429);
+            return $this->respondWithError(
+                'Trop de tentatives de connexion. Réessayez dans ' . ceil($seconds / 60) . ' minute(s).',
+                429
+            );
         }
 
         $request->validate([
@@ -62,11 +58,8 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             RateLimiter::hit($rateLimitKey, self::LOGIN_LOCKOUT_SECONDS);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Identifiants incorrects.',
-            ], 401);
+
+            return $this->respondWithError('Identifiants incorrects.', 401);
         }
 
         RateLimiter::clear($rateLimitKey);
@@ -81,28 +74,23 @@ class AuthController extends Controller
         $tokenName = 'auth_token_' . $user->id . '_' . now()->format('Ymd_His');
         $token = $user->createToken($tokenName, ['*'], now()->addDays(7))->plainTextToken;
 
-        $ministereId = $user->ministere_id;
-        if ($user->role === 'super_admin') {
-            $ministereId = null;
-            if ($user->ministere_id === 0) {
-                $user->update(['ministere_id' => null]);
-            }
+        if ($user->role === 'super_admin' && ($user->ministere_id === 0 || $user->ministere_id === null)) {
+            $user->update(['ministere_id' => null]);
         }
 
         LogAction::create([
             'user_id'      => $user->id,
             'ministere_id' => $user->ministere_id,
-            'action'      => 'login',
-            'module'      => 'auth',
-            'ip'          => $request->ip(),
-            'date_action' => now(),
+            'action'       => 'login',
+            'module'       => 'auth',
+            'ip'           => $request->ip(),
+            'date_action'  => now(),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'token'   => $token,
-            'user'    => new UserResource($user),
-        ]);
+        return $this->respondSuccess([
+            'token' => $token,
+            'user'  => new UserResource($user),
+        ], 'Connexion réussie');
     }
 
     public function register(Request $request)
@@ -128,7 +116,7 @@ class AuthController extends Controller
             'ville'             => $validated['ville'] ?? null,
             'pays'              => $validated['pays'] ?? 'République centrafricaine',
             'email_contact'     => $validated['email_contact'] ?? $validated['email'],
-            'couleur_primaire'   => '#1E3A8A',
+            'couleur_primaire'  => '#1E3A8A',
             'couleur_secondaire' => '#FFFFFF',
             'statut'            => 'actif',
         ]);
@@ -136,11 +124,11 @@ class AuthController extends Controller
         $user = User::create([
             'name'         => $validated['name'],
             'prenom'       => $validated['prenom'] ?? null,
-            'email'       => $validated['email'],
-            'password'   => Hash::make($validated['password']),
-            'role'        => 'admin_ministere',
+            'email'        => $validated['email'],
+            'password'     => Hash::make($validated['password']),
+            'role'         => 'admin_ministere',
             'ministere_id' => $ministere->id,
-            'actif'       => true,
+            'actif'        => true,
         ]);
 
         $tokenName = 'auth_token_' . $user->id . '_' . now()->format('Ymd_His');
@@ -148,25 +136,21 @@ class AuthController extends Controller
 
         $superAdmins = User::where('role', 'super_admin')->where('actif', true)->get();
         foreach ($superAdmins as $sa) {
-            if (class_exists('\App\Helpers\NotifHelper')) {
-                \App\Helpers\NotifHelper::send(
-                    $sa->id,
-                    'Nouveau ministère inscrit',
-                    "{$validated['ministere_nom']} vient de rejoindre EgliseHub !",
-                    'success',
-                    '/admin/ministeres',
-                    'ministeres'
-                );
-            }
+            \App\Helpers\NotifHelper::send(
+                $sa->id,
+                'Nouveau ministère inscrit',
+                "{$validated['ministere_nom']} vient de rejoindre EgliseHub !",
+                'success',
+                '/admin/ministeres',
+                'ministeres'
+            );
         }
 
-return response()->json([
-            'success'   => true,
-            'message'   => 'Ministère créé avec succès.',
+        return $this->respondSuccess([
             'token'     => $token,
             'user'      => new UserResource($user),
             'ministere' => $ministere,
-        ], 201);
+        ], 'Ministère créé avec succès.', 201);
     }
 
     /**
@@ -185,15 +169,12 @@ return response()->json([
     {
         $user = $request->user();
         $tokenId = $user->currentAccessToken()->id;
-        
+
         $user->tokens()->where('id', $tokenId)->delete();
 
-        $this->logAction($request, 'logout', 'auth', 'Déconnexion');
+        $this->log($request, 'logout', 'auth', 'Déconnexion');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Déconnexion réussie.',
-        ]);
+        return $this->respondSuccess(null, 'Déconnexion réussie.');
     }
 
     /**
@@ -211,18 +192,14 @@ return response()->json([
     public function me(Request $request)
     {
         $user = $request->user();
-        
-        $ministereId = $user->ministere_id;
-        if ($user->role === 'super_admin' && ($ministereId === 0 || $ministereId === null)) {
-            $ministereId = null;
+
+        if ($user->role === 'super_admin' && ($user->ministere_id === 0 || $user->ministere_id === null)) {
+            $user->ministere_id = null;
         }
-        
+
         $user->load('ministere');
 
-        return response()->json([
-            'success' => true,
-            'user'    => new UserResource($user),
-        ]);
+        return $this->respondSuccess(['user' => new UserResource($user)]);
     }
 
     /**
@@ -244,10 +221,7 @@ return response()->json([
         $user = $request->user();
 
         if (!Hash::check($request->ancien_mot_de_passe, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ancien mot de passe incorrect.',
-            ], 422);
+            return $this->respondWithError('Ancien mot de passe incorrect.', 422);
         }
 
         $user->update([
@@ -256,12 +230,9 @@ return response()->json([
 
         $user->tokens()->where('id', '!=', $user->currentAccessToken()->id)->delete();
 
-        $this->logAction($request, 'change_password', 'auth', 'Mot de passe modifié');
+        $this->log($request, 'change_password', 'auth', 'Mot de passe modifié');
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Mot de passe mis à jour. Autres sessions déconnectées.',
-        ]);
+        return $this->respondSuccess(null, 'Mot de passe mis à jour. Autres sessions déconnectées.');
     }
 
     /**
@@ -279,15 +250,12 @@ return response()->json([
     public function refreshToken(Request $request)
     {
         $user = $request->user();
-        
+
         $user->currentAccessToken()->delete();
-        
+
         $tokenName = 'auth_token_' . $user->id . '_' . now()->format('Ymd_His');
         $token = $user->createToken($tokenName, ['*'], now()->addDays(7))->plainTextToken;
-        
-        return response()->json([
-            'success' => true,
-            'token'   => $token,
-        ]);
+
+        return $this->respondSuccess(['token' => $token]);
     }
 }
